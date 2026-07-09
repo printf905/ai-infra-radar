@@ -28,7 +28,7 @@ make demo-data
 make demo-dashboard
 ```
 
-Then run the printed Streamlit command and set the dashboard DB path to `data/sample/sample.db`.
+`make demo-dashboard` launches Streamlit with `RADAR_DB_PATH=data/sample/sample.db`, so the dashboard opens against the sample database automatically.
 
 Screenshot coming soon.
 

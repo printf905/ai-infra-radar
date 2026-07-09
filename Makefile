@@ -29,5 +29,4 @@ demo-data:
 	python -m radar.cli load-sample --db $(DEMO_DB)
 
 demo-dashboard:
-	@echo "streamlit run app/streamlit_app.py"
-	@echo "Then set DB path to $(DEMO_DB) in the dashboard sidebar."
+	RADAR_DB_PATH=$(DEMO_DB) streamlit run app/streamlit_app.py

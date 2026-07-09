@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,7 @@ SETUP_COMMANDS = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default=DEFAULT_DB_PATH)
+    parser.add_argument("--db", default=os.getenv("RADAR_DB_PATH", DEFAULT_DB_PATH))
     args, _ = parser.parse_known_args()
     return args
 

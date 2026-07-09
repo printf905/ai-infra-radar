@@ -147,23 +147,27 @@ def _load_repos(conn: sqlite3.Connection) -> dict[str, int]:
 
 
 def _load_tags(conn: sqlite3.Connection, paper_ids: dict[str, int]) -> int:
-    inserted = 0
-    inserted += insert_paper_tags(
+    insert_paper_tags(
         conn,
         paper_ids["2607.00001"],
         {"inference_optimization": 0.95, "model_compression": 0.75},
     )
-    inserted += insert_paper_tags(
+    insert_paper_tags(
         conn,
         paper_ids["2607.00002"],
         {"long_context": 0.95, "rag": 0.75},
     )
-    inserted += insert_paper_tags(
+    insert_paper_tags(
         conn,
         paper_ids["2607.00003"],
         {"agents": 0.95},
     )
-    return inserted
+    placeholders = ",".join("?" for _ in paper_ids)
+    row = conn.execute(
+        f"SELECT COUNT(*) AS count FROM paper_tags WHERE paper_id IN ({placeholders})",
+        tuple(paper_ids.values()),
+    ).fetchone()
+    return int(row["count"] or 0)
 
 
 def _load_scores(conn: sqlite3.Connection, paper_ids: dict[str, int]) -> int:

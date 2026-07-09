@@ -17,6 +17,7 @@ def test_load_sample_data_populates_core_tables(tmp_path) -> None:
     assert result.matches == 3
     assert fetch_all(conn, "SELECT COUNT(*) AS count FROM papers")[0]["count"] == 3
     assert fetch_all(conn, "SELECT COUNT(*) AS count FROM repos")[0]["count"] == 3
+    assert fetch_all(conn, "SELECT COUNT(*) AS count FROM paper_tags")[0]["count"] == 5
     assert fetch_all(conn, "SELECT COUNT(*) AS count FROM daily_scores")[0]["count"] == 3
 
 
@@ -40,6 +41,7 @@ def test_load_sample_data_is_idempotent() -> None:
     second = load_sample_data(conn)
 
     assert second.papers == 3
+    assert second.tags == 5
     assert fetch_all(conn, "SELECT COUNT(*) AS count FROM papers")[0]["count"] == 3
     assert fetch_all(conn, "SELECT COUNT(*) AS count FROM repos")[0]["count"] == 3
     assert fetch_all(conn, "SELECT COUNT(*) AS count FROM repo_snapshots")[0]["count"] == 3
