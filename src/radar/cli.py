@@ -15,6 +15,7 @@ from radar.config import AppConfig, load_config
 from radar.db import connect, init_db
 from radar.digest import write_digest
 from radar.matching import match_database
+from radar.sample_data import load_sample_data
 from radar.scoring import score_database
 from radar.tagging import tag_database
 
@@ -22,6 +23,7 @@ app = typer.Typer(help="AI Infra Radar CLI")
 ConfigPath = Annotated[Path, typer.Option("--config", "-c")]
 DbPath = Annotated[Path | None, typer.Option("--db")]
 DigestDate = Annotated[str, typer.Option("--date")]
+SampleDbPath = Annotated[Path, typer.Option("--db")]
 
 
 def _load(config: Path, db: Path | None = None) -> tuple[AppConfig, sqlite3.Connection]:
@@ -105,6 +107,23 @@ def digest(
     path = write_digest(conn, cfg.reports_dir, _parse_digest_date(digest_date))
     conn.close()
     typer.echo(f"Wrote {path}")
+
+
+@app.command("load-sample")
+def load_sample(db: SampleDbPath = Path("data/sample/sample.db")) -> None:
+    conn = connect(db)
+    result = load_sample_data(conn)
+    conn.close()
+    typer.echo(
+        f"Loaded sample data into {db}: "
+        f"{result.papers} papers, {result.repos} repos, "
+        f"{result.tags} tags, {result.scores} scores, "
+        f"{result.snapshots} snapshots, {result.matches} matches"
+    )
+    typer.echo(
+        "Sample digest supported. Run: "
+        f"python -m radar.cli digest --db {db} --date 2026-07-09"
+    )
 
 
 @app.command("dashboard")
