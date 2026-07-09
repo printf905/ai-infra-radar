@@ -45,6 +45,7 @@ python -m radar match --config config.yaml
 python -m radar score --config config.yaml
 python -m radar digest --config config.yaml --date today
 python -m radar dashboard --config config.yaml
+streamlit run app/streamlit_app.py
 ```
 
 Equivalent Make targets are available:
