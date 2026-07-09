@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS paper_tags (
     id INTEGER PRIMARY KEY,
     paper_id INTEGER NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
     tag TEXT NOT NULL,
+    confidence REAL NOT NULL DEFAULT 0,
     source TEXT NOT NULL DEFAULT 'rules',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (paper_id, tag, source)
@@ -67,14 +68,11 @@ CREATE TABLE IF NOT EXISTS paper_repo_matches (
 CREATE TABLE IF NOT EXISTS daily_scores (
     id INTEGER PRIMARY KEY,
     score_date TEXT NOT NULL,
-    tag TEXT NOT NULL,
+    paper_id INTEGER NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
     score REAL NOT NULL,
-    paper_count INTEGER NOT NULL DEFAULT 0,
-    repo_count INTEGER NOT NULL DEFAULT 0,
-    match_count INTEGER NOT NULL DEFAULT 0,
-    star_count INTEGER NOT NULL DEFAULT 0,
+    components_json TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (score_date, tag)
+    UNIQUE (score_date, paper_id)
 );
 
 CREATE TABLE IF NOT EXISTS digests (

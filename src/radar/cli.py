@@ -62,11 +62,19 @@ def ingest_github(config: ConfigPath = Path("config.yaml"), db: DbPath = None) -
 
 
 @app.command("tag")
-def tag(config: ConfigPath = Path("config.yaml")) -> None:
-    cfg, conn = _load(config)
-    count = tag_database(conn, cfg.tagging)
+def tag(config: ConfigPath = Path("config.yaml"), db: DbPath = None) -> None:
+    cfg, conn = _load(config, db)
+    count = tag_database(conn, cfg)
     conn.close()
-    typer.echo(f"Tagged {count} records")
+    typer.echo(f"Tagged {count} papers")
+
+
+@app.command("tag-papers")
+def tag_papers(config: ConfigPath = Path("config.yaml"), db: DbPath = None) -> None:
+    cfg, conn = _load(config, db)
+    count = tag_database(conn, cfg)
+    conn.close()
+    typer.echo(f"Tagged {count} papers")
 
 
 @app.command("match")
@@ -78,11 +86,11 @@ def match(config: ConfigPath = Path("config.yaml")) -> None:
 
 
 @app.command("score")
-def score(config: ConfigPath = Path("config.yaml")) -> None:
-    cfg, conn = _load(config)
-    count = score_database(conn, cfg.scoring)
+def score(config: ConfigPath = Path("config.yaml"), db: DbPath = None) -> None:
+    cfg, conn = _load(config, db)
+    count = score_database(conn, cfg)
     conn.close()
-    typer.echo(f"Computed {count} trend scores")
+    typer.echo(f"Computed {count} paper scores")
 
 
 @app.command("digest")

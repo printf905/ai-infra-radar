@@ -32,6 +32,8 @@ class ScoringConfig(BaseModel):
 
 
 class TopicConfig(BaseModel):
+    keywords: list[str] = Field(default_factory=list)
+    weight: float = 1.0
     arxiv_queries: list[str] = Field(default_factory=list)
     github_queries: list[str] = Field(default_factory=list)
 
@@ -62,6 +64,21 @@ class AppConfig(BaseModel):
         if not queries:
             queries.extend(self.github.queries)
         return list(dict.fromkeys(queries))
+
+    @property
+    def topic_keywords(self) -> dict[str, list[str]]:
+        keywords = {
+            name: topic.keywords
+            for name, topic in self.topics.items()
+            if topic.keywords
+        }
+        if not keywords:
+            return self.tagging.keywords
+        return keywords
+
+    @property
+    def topic_weights(self) -> dict[str, float]:
+        return {name: topic.weight for name, topic in self.topics.items()}
 
 
 def load_config(path: Path | str = "config.yaml") -> AppConfig:

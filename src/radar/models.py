@@ -44,6 +44,7 @@ class RepoSnapshot(BaseModel):
 class PaperTag(BaseModel):
     paper_id: int
     tag: str
+    confidence: float = 0.0
     source: str = "rules"
 
 
@@ -60,12 +61,9 @@ class Match(PaperRepoMatch):
 
 class DailyScore(BaseModel):
     score_date: date
-    tag: str
+    paper_id: int
     score: float
-    paper_count: int
-    repo_count: int
-    match_count: int
-    star_count: int
+    components_json: str
 
 
 class TrendScore(BaseModel):

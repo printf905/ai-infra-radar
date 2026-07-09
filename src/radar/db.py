@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Iterable
-from datetime import date
+from collections.abc import Iterable, Mapping
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -176,20 +175,37 @@ def insert_repo_snapshot(conn: sqlite3.Connection, snapshot: RepoSnapshot) -> in
 def insert_paper_tags(
     conn: sqlite3.Connection,
     paper_id: int,
-    tags: Iterable[str],
+    tags: Iterable[str] | Mapping[str, float],
     source: str = "rules",
 ) -> int:
     inserted = 0
-    for tag in sorted({tag.strip() for tag in tags if tag.strip()}):
-        cursor = conn.execute(
+    tag_confidences = _tag_confidences(tags)
+    for tag, confidence in sorted(tag_confidences.items()):
+        existing = conn.execute(
             """
-            INSERT INTO paper_tags (paper_id, tag, source)
-            VALUES (?, ?, ?)
-            ON CONFLICT(paper_id, tag, source) DO NOTHING
+            SELECT id FROM paper_tags
+            WHERE paper_id = ? AND tag = ? AND source = ?
             """,
             (paper_id, tag, source),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                """
+                UPDATE paper_tags
+                SET confidence = ?
+                WHERE paper_id = ? AND tag = ? AND source = ?
+                """,
+                (confidence, paper_id, tag, source),
+            )
+            continue
+        conn.execute(
+            """
+            INSERT INTO paper_tags (paper_id, tag, confidence, source)
+            VALUES (?, ?, ?, ?)
+            """,
+            (paper_id, tag, confidence, source),
         )
-        inserted += max(cursor.rowcount, 0)
+        inserted += 1
     conn.commit()
     return inserted
 
@@ -197,7 +213,7 @@ def insert_paper_tags(
 def replace_paper_tags(
     conn: sqlite3.Connection,
     paper_id: int,
-    tags: Iterable[str],
+    tags: Iterable[str] | Mapping[str, float],
     source: str = "rules",
 ) -> int:
     conn.execute("DELETE FROM paper_tags WHERE paper_id = ? AND source = ?", (paper_id, source))
@@ -208,30 +224,24 @@ def insert_daily_score(conn: sqlite3.Connection, score: DailyScore) -> int:
     conn.execute(
         """
         INSERT INTO daily_scores
-            (score_date, tag, score, paper_count, repo_count, match_count, star_count)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(score_date, tag) DO UPDATE SET
+            (score_date, paper_id, score, components_json)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(score_date, paper_id) DO UPDATE SET
             score = excluded.score,
-            paper_count = excluded.paper_count,
-            repo_count = excluded.repo_count,
-            match_count = excluded.match_count,
-            star_count = excluded.star_count
+            components_json = excluded.components_json
         """,
         (
             score.score_date.isoformat(),
-            score.tag,
+            score.paper_id,
             score.score,
-            score.paper_count,
-            score.repo_count,
-            score.match_count,
-            score.star_count,
+            score.components_json,
         ),
     )
     conn.commit()
     return _required_id(
         conn,
-        "SELECT id FROM daily_scores WHERE score_date = ? AND tag = ?",
-        (score.score_date.isoformat(), score.tag),
+        "SELECT id FROM daily_scores WHERE score_date = ? AND paper_id = ?",
+        (score.score_date.isoformat(), score.paper_id),
     )
 
 
@@ -272,23 +282,7 @@ def upsert_matches(conn: sqlite3.Connection, matches: Iterable[Match]) -> int:
 
 
 def replace_scores(conn: sqlite3.Connection, scores: Iterable[TrendScore]) -> int:
-    today = date.today()
     rows = list(scores)
-    conn.execute("DELETE FROM daily_scores WHERE score_date = ?", (today.isoformat(),))
-    for score in rows:
-        insert_daily_score(
-            conn,
-            DailyScore(
-                score_date=today,
-                tag=score.tag,
-                score=score.score,
-                paper_count=score.paper_count,
-                repo_count=score.repo_count,
-                match_count=score.match_count,
-                star_count=score.star_count,
-            ),
-        )
-    conn.commit()
     return len(rows)
 
 
@@ -309,3 +303,9 @@ def _required_id(conn: sqlite3.Connection, query: str, params: tuple[Any, ...]) 
 
 def _iso(value: Any) -> str | None:
     return value.isoformat() if value else None
+
+
+def _tag_confidences(tags: Iterable[str] | Mapping[str, float]) -> dict[str, float]:
+    if isinstance(tags, Mapping):
+        return {tag.strip(): confidence for tag, confidence in tags.items() if tag.strip()}
+    return {tag.strip(): 0.0 for tag in tags if tag.strip()}

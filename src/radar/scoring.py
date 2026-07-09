@@ -1,71 +1,101 @@
 from __future__ import annotations
 
+import json
 import sqlite3
+from datetime import UTC, date, datetime
 
-from radar.config import ScoringConfig
-from radar.db import replace_scores
-from radar.models import TrendScore
+from radar.config import AppConfig
+from radar.db import insert_daily_score
+from radar.models import DailyScore
 
 
-def compute_scores(conn: sqlite3.Connection, config: ScoringConfig) -> list[TrendScore]:
-    tags = [
-        str(row["tag"])
-        for row in conn.execute("SELECT DISTINCT tag FROM paper_tags ORDER BY tag").fetchall()
-    ]
-    scores: list[TrendScore] = []
-
-    for tag in tags:
-        paper_count = _single_int(
-            conn,
-            "SELECT COUNT(DISTINCT paper_id) AS value FROM paper_tags WHERE tag = ?",
-            (tag,),
+def score_papers(
+    conn: sqlite3.Connection,
+    config: AppConfig,
+    today: date | None = None,
+) -> list[DailyScore]:
+    score_date = today or date.today()
+    scores: list[DailyScore] = []
+    for paper in conn.execute("SELECT id, published_at FROM papers").fetchall():
+        components = score_components(
+            published_at=_parse_datetime(paper["published_at"]),
+            tag_confidences=_paper_tag_confidences(conn, int(paper["id"])),
+            topic_weights=config.topic_weights,
+            today=score_date,
         )
-        match_count = _single_int(
-            conn,
-            """
-            SELECT COUNT(DISTINCT m.id) AS value
-            FROM paper_tags pt
-            JOIN paper_repo_matches m ON m.paper_id = pt.paper_id
-            WHERE pt.tag = ?
-            """,
-            (tag,),
+        score = final_score(components)
+        daily_score = DailyScore(
+            score_date=score_date,
+            paper_id=int(paper["id"]),
+            score=score,
+            components_json=json.dumps(components, sort_keys=True),
         )
-        repo_rows = conn.execute(
-            """
-            SELECT DISTINCT r.id, r.stars
-            FROM paper_tags pt
-            JOIN paper_repo_matches m ON m.paper_id = pt.paper_id
-            JOIN repos r ON r.id = m.repo_id
-            WHERE pt.tag = ?
-            """,
-            (tag,),
-        ).fetchall()
-        repo_count = len(repo_rows)
-        star_count = sum(int(row["stars"] or 0) for row in repo_rows)
-        score = (
-            paper_count * config.paper_weight
-            + repo_count * config.repo_weight
-            + star_count * config.star_weight
-            + match_count * config.match_weight
+        insert_daily_score(conn, daily_score)
+        scores.append(daily_score)
+    return scores
+
+
+def score_components(
+    published_at: datetime | None,
+    tag_confidences: dict[str, float],
+    topic_weights: dict[str, float],
+    today: date | None = None,
+) -> dict[str, float]:
+    topic_relevance = 0.0
+    for tag, confidence in tag_confidences.items():
+        topic_relevance = max(topic_relevance, confidence * topic_weights.get(tag, 1.0))
+    return {
+        "topic_relevance": round(min(topic_relevance, 1.0), 4),
+        "recency": recency_score(published_at, today=today),
+        "github_momentum": 0.0,
+        "implementation_confidence": 0.0,
+        "anomaly_score": 0.0,
+    }
+
+
+def final_score(components: dict[str, float]) -> float:
+    score = (
+        0.35 * components["topic_relevance"]
+        + 0.25 * components["recency"]
+        + 0.20 * components["github_momentum"]
+        + 0.10 * components["implementation_confidence"]
+        + 0.10 * components["anomaly_score"]
+    )
+    return round(min(max(score, 0.0), 1.0), 4)
+
+
+def recency_score(published_at: datetime | None, today: date | None = None) -> float:
+    if published_at is None:
+        return 0.1
+    current_date = today or date.today()
+    age_days = (current_date - published_at.date()).days
+    if age_days <= 3:
+        return 1.0
+    if age_days <= 7:
+        return 0.7
+    if age_days <= 14:
+        return 0.4
+    return 0.1
+
+
+def score_database(conn: sqlite3.Connection, config: AppConfig) -> int:
+    return len(score_papers(conn, config))
+
+
+def _paper_tag_confidences(conn: sqlite3.Connection, paper_id: int) -> dict[str, float]:
+    return {
+        str(row["tag"]): float(row["confidence"])
+        for row in conn.execute(
+            "SELECT tag, confidence FROM paper_tags WHERE paper_id = ?",
+            (paper_id,),
         )
-        scores.append(
-            TrendScore(
-                tag=tag,
-                score=round(score, 4),
-                paper_count=paper_count,
-                repo_count=repo_count,
-                match_count=match_count,
-                star_count=star_count,
-            )
-        )
-
-    return sorted(scores, key=lambda item: item.score, reverse=True)
+    }
 
 
-def score_database(conn: sqlite3.Connection, config: ScoringConfig) -> int:
-    return replace_scores(conn, compute_scores(conn, config))
-
-
-def _single_int(conn: sqlite3.Connection, query: str, params: tuple[object, ...]) -> int:
-    row = conn.execute(query, params).fetchone()
-    return int(row["value"] or 0) if row else 0
+def _parse_datetime(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed

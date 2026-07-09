@@ -6,18 +6,37 @@ arxiv:
   max_results: 25
 
 topics:
-  inference:
+  llm_inference:
+    weight: 1.0
+    keywords:
+      - inference
+      - serving
+      - latency
+      - throughput
+      - speculative decoding
     arxiv_queries:
       - 'cat:cs.LG AND ("inference" OR "serving")'
     github_queries:
       - 'inference server language:Python'
       - 'llm serving stars:>50'
   training:
+    weight: 0.9
+    keywords:
+      - training
+      - distributed
+      - checkpoint
     arxiv_queries:
       - 'cat:cs.DC AND ("distributed training" OR "GPU")'
       - 'cat:cs.LG AND "training systems"'
     github_queries:
       - 'distributed training language:Python'
+  agents:
+    weight: 0.8
+    keywords:
+      - agent
+      - agents
+      - tool use
+      - planning
 
 github:
   enabled: true

@@ -16,10 +16,11 @@ def write_digest(conn: sqlite3.Connection, reports_dir: Path | str) -> Path:
 
     scores = conn.execute(
         """
-        SELECT tag, score, paper_count, repo_count, match_count, star_count
-        FROM daily_scores
-        WHERE score_date = ?
-        ORDER BY score DESC
+        SELECT ds.score, p.title, p.url
+        FROM daily_scores ds
+        JOIN papers p ON p.id = ds.paper_id
+        WHERE ds.score_date = ?
+        ORDER BY ds.score DESC
         LIMIT 20
         """,
         (today.isoformat(),),
@@ -34,11 +35,7 @@ def write_digest(conn: sqlite3.Connection, reports_dir: Path | str) -> Path:
     lines = [f"# AI Infra Radar Digest - {today.isoformat()}", "", "## Top Trends", ""]
     if scores:
         for row in scores:
-            lines.append(
-                f"- **{row['tag']}**: score {row['score']} "
-                f"({row['paper_count']} papers, {row['repo_count']} repos, "
-                f"{row['match_count']} matches, {row['star_count']} stars)"
-            )
+            lines.append(f"- [{row['title']}]({row['url']}) - score {row['score']}")
     else:
         lines.append("- No scores computed yet.")
 
