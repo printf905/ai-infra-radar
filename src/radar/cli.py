@@ -3,12 +3,13 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
 from radar.collectors.arxiv_collector import collect_arxiv
 from radar.collectors.github_collector import collect_github
-from radar.config import load_config
+from radar.config import AppConfig, load_config
 from radar.db import connect, init_db, upsert_papers, upsert_repos
 from radar.digest import write_digest
 from radar.matching import match_database
@@ -16,9 +17,10 @@ from radar.scoring import score_database
 from radar.tagging import tag_database
 
 app = typer.Typer(help="AI Infra Radar CLI")
+ConfigPath = Annotated[Path, typer.Option("--config", "-c")]
 
 
-def _load(config: Path) -> tuple[object, object]:
+def _load(config: Path) -> tuple[AppConfig, object]:
     cfg = load_config(config)
     conn = connect(cfg.database_path)
     init_db(conn)
@@ -26,14 +28,14 @@ def _load(config: Path) -> tuple[object, object]:
 
 
 @app.command("init-db")
-def init_db_command(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> None:
+def init_db_command(config: ConfigPath = Path("config.yaml")) -> None:
     cfg, conn = _load(config)
     conn.close()
     typer.echo(f"Initialized database at {cfg.database_path}")
 
 
 @app.command("ingest-arxiv")
-def ingest_arxiv(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> None:
+def ingest_arxiv(config: ConfigPath = Path("config.yaml")) -> None:
     cfg, conn = _load(config)
     if not cfg.arxiv.enabled:
         typer.echo("arXiv collector disabled")
@@ -44,7 +46,7 @@ def ingest_arxiv(config: Path = typer.Option(Path("config.yaml"), "--config", "-
 
 
 @app.command("ingest-github")
-def ingest_github(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> None:
+def ingest_github(config: ConfigPath = Path("config.yaml")) -> None:
     cfg, conn = _load(config)
     if not cfg.github.enabled:
         typer.echo("GitHub collector disabled")
@@ -55,7 +57,7 @@ def ingest_github(config: Path = typer.Option(Path("config.yaml"), "--config", "
 
 
 @app.command("tag")
-def tag(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> None:
+def tag(config: ConfigPath = Path("config.yaml")) -> None:
     cfg, conn = _load(config)
     count = tag_database(conn, cfg.tagging)
     conn.close()
@@ -63,7 +65,7 @@ def tag(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> N
 
 
 @app.command("match")
-def match(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> None:
+def match(config: ConfigPath = Path("config.yaml")) -> None:
     _, conn = _load(config)
     count = match_database(conn)
     conn.close()
@@ -71,7 +73,7 @@ def match(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) ->
 
 
 @app.command("score")
-def score(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> None:
+def score(config: ConfigPath = Path("config.yaml")) -> None:
     cfg, conn = _load(config)
     count = score_database(conn, cfg.scoring)
     conn.close()
@@ -79,7 +81,7 @@ def score(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) ->
 
 
 @app.command("digest")
-def digest(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> None:
+def digest(config: ConfigPath = Path("config.yaml")) -> None:
     cfg, conn = _load(config)
     path = write_digest(conn, cfg.reports_dir)
     conn.close()
@@ -87,7 +89,7 @@ def digest(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -
 
 
 @app.command("dashboard")
-def dashboard(config: Path = typer.Option(Path("config.yaml"), "--config", "-c")) -> None:
+def dashboard(config: ConfigPath = Path("config.yaml")) -> None:
     command = [
         sys.executable,
         "-m",

@@ -8,43 +8,40 @@ from radar.models import TrendScore
 
 
 def compute_scores(conn: sqlite3.Connection, config: ScoringConfig) -> list[TrendScore]:
-    rows = conn.execute(
-        """
-        SELECT
-            t.name AS tag,
-            SUM(CASE WHEN it.item_type = 'paper' THEN 1 ELSE 0 END) AS paper_count,
-            SUM(CASE WHEN it.item_type = 'repo' THEN 1 ELSE 0 END) AS repo_count,
-            COALESCE(SUM(CASE WHEN it.item_type = 'repo' THEN r.stars ELSE 0 END), 0) AS star_count
-        FROM tags t
-        JOIN item_tags it ON it.tag_id = t.id
-        LEFT JOIN repos r ON it.item_type = 'repo' AND it.item_id = r.id
-        GROUP BY t.name
-        """
-    ).fetchall()
-
-    match_counts = {
-        row["tag"]: int(row["match_count"])
-        for row in conn.execute(
-            """
-            SELECT t.name AS tag, COUNT(DISTINCT m.id) AS match_count
-            FROM tags t
-            JOIN item_tags pit ON pit.tag_id = t.id AND pit.item_type = 'paper'
-            JOIN paper_repo_matches m ON m.paper_id = pit.item_id
-            JOIN item_tags rit
-              ON rit.tag_id = t.id
-             AND rit.item_type = 'repo'
-             AND rit.item_id = m.repo_id
-            GROUP BY t.name
-            """
-        )
-    }
-
+    tags = [
+        str(row["tag"])
+        for row in conn.execute("SELECT DISTINCT tag FROM paper_tags ORDER BY tag").fetchall()
+    ]
     scores: list[TrendScore] = []
-    for row in rows:
-        paper_count = int(row["paper_count"] or 0)
-        repo_count = int(row["repo_count"] or 0)
-        star_count = int(row["star_count"] or 0)
-        match_count = match_counts.get(str(row["tag"]), 0)
+
+    for tag in tags:
+        paper_count = _single_int(
+            conn,
+            "SELECT COUNT(DISTINCT paper_id) AS value FROM paper_tags WHERE tag = ?",
+            (tag,),
+        )
+        match_count = _single_int(
+            conn,
+            """
+            SELECT COUNT(DISTINCT m.id) AS value
+            FROM paper_tags pt
+            JOIN paper_repo_matches m ON m.paper_id = pt.paper_id
+            WHERE pt.tag = ?
+            """,
+            (tag,),
+        )
+        repo_rows = conn.execute(
+            """
+            SELECT DISTINCT r.id, r.stars
+            FROM paper_tags pt
+            JOIN paper_repo_matches m ON m.paper_id = pt.paper_id
+            JOIN repos r ON r.id = m.repo_id
+            WHERE pt.tag = ?
+            """,
+            (tag,),
+        ).fetchall()
+        repo_count = len(repo_rows)
+        star_count = sum(int(row["stars"] or 0) for row in repo_rows)
         score = (
             paper_count * config.paper_weight
             + repo_count * config.repo_weight
@@ -53,7 +50,7 @@ def compute_scores(conn: sqlite3.Connection, config: ScoringConfig) -> list[Tren
         )
         scores.append(
             TrendScore(
-                tag=str(row["tag"]),
+                tag=tag,
                 score=round(score, 4),
                 paper_count=paper_count,
                 repo_count=repo_count,
@@ -61,8 +58,14 @@ def compute_scores(conn: sqlite3.Connection, config: ScoringConfig) -> list[Tren
                 star_count=star_count,
             )
         )
+
     return sorted(scores, key=lambda item: item.score, reverse=True)
 
 
 def score_database(conn: sqlite3.Connection, config: ScoringConfig) -> int:
     return replace_scores(conn, compute_scores(conn, config))
+
+
+def _single_int(conn: sqlite3.Connection, query: str, params: tuple[object, ...]) -> int:
+    row = conn.execute(query, params).fetchone()
+    return int(row["value"] or 0) if row else 0

@@ -4,7 +4,7 @@ import re
 import sqlite3
 
 from radar.config import TaggingConfig
-from radar.db import replace_item_tags
+from radar.db import replace_paper_tags
 
 
 def tags_for_text(text: str, keywords: dict[str, list[str]]) -> list[str]:
@@ -20,11 +20,7 @@ def tag_database(conn: sqlite3.Connection, config: TaggingConfig) -> int:
     count = 0
     for row in conn.execute("SELECT id, title, abstract FROM papers"):
         text = f"{row['title']} {row['abstract']}"
-        replace_item_tags(conn, "paper", int(row["id"]), tags_for_text(text, config.keywords))
-        count += 1
-    for row in conn.execute("SELECT id, full_name, description FROM repos"):
-        text = f"{row['full_name']} {row['description']}"
-        replace_item_tags(conn, "repo", int(row["id"]), tags_for_text(text, config.keywords))
+        replace_paper_tags(conn, int(row["id"]), tags_for_text(text, config.keywords))
         count += 1
     conn.commit()
     return count

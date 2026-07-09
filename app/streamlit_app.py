@@ -24,7 +24,10 @@ def main() -> None:
     st.set_page_config(page_title="AI Infra Radar", layout="wide")
     st.title("AI Infra Radar")
 
-    scores = pd.read_sql_query("SELECT * FROM trend_scores ORDER BY score DESC", conn)
+    scores = pd.read_sql_query(
+        "SELECT * FROM daily_scores ORDER BY score_date DESC, score DESC",
+        conn,
+    )
     papers = pd.read_sql_query(
         "SELECT title, published_at, url FROM papers ORDER BY published_at DESC LIMIT 50", conn
     )

@@ -27,18 +27,25 @@ CREATE TABLE IF NOT EXISTS repos (
     ingested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS tags (
+CREATE TABLE IF NOT EXISTS repo_snapshots (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    repo_id INTEGER NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
+    snapshot_date TEXT NOT NULL,
+    stars INTEGER NOT NULL DEFAULT 0,
+    forks INTEGER NOT NULL DEFAULT 0,
+    open_issues INTEGER,
+    pushed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (repo_id, snapshot_date)
 );
 
-CREATE TABLE IF NOT EXISTS item_tags (
+CREATE TABLE IF NOT EXISTS paper_tags (
     id INTEGER PRIMARY KEY,
-    item_type TEXT NOT NULL CHECK (item_type IN ('paper', 'repo')),
-    item_id INTEGER NOT NULL,
-    tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    paper_id INTEGER NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
+    tag TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'rules',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (item_type, item_id, tag_id)
+    UNIQUE (paper_id, tag, source)
 );
 
 CREATE TABLE IF NOT EXISTS paper_repo_matches (
@@ -52,13 +59,25 @@ CREATE TABLE IF NOT EXISTS paper_repo_matches (
     UNIQUE (paper_id, repo_id)
 );
 
-CREATE TABLE IF NOT EXISTS trend_scores (
+CREATE TABLE IF NOT EXISTS daily_scores (
     id INTEGER PRIMARY KEY,
-    tag TEXT NOT NULL UNIQUE,
+    score_date TEXT NOT NULL,
+    tag TEXT NOT NULL,
     score REAL NOT NULL,
-    paper_count INTEGER NOT NULL,
-    repo_count INTEGER NOT NULL,
-    match_count INTEGER NOT NULL,
-    star_count INTEGER NOT NULL,
-    computed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    paper_count INTEGER NOT NULL DEFAULT 0,
+    repo_count INTEGER NOT NULL DEFAULT 0,
+    match_count INTEGER NOT NULL DEFAULT 0,
+    star_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (score_date, tag)
+);
+
+CREATE TABLE IF NOT EXISTS digests (
+    id INTEGER PRIMARY KEY,
+    digest_date TEXT NOT NULL,
+    path TEXT NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (digest_date, path)
 );

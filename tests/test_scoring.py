@@ -2,7 +2,7 @@ from radar.config import ScoringConfig
 from radar.db import (
     connect,
     init_db,
-    replace_item_tags,
+    replace_paper_tags,
     upsert_matches,
     upsert_papers,
     upsert_repos,
@@ -38,8 +38,7 @@ def test_compute_scores_combines_counts_stars_and_matches() -> None:
 
     paper_id = conn.execute("SELECT id FROM papers").fetchone()["id"]
     repo_id = conn.execute("SELECT id FROM repos").fetchone()["id"]
-    replace_item_tags(conn, "paper", paper_id, ["inference"])
-    replace_item_tags(conn, "repo", repo_id, ["inference"])
+    replace_paper_tags(conn, paper_id, ["inference"])
     upsert_matches(conn, [Match(paper_id=paper_id, repo_id=repo_id, score=0.5, reason="test")])
 
     scores = compute_scores(

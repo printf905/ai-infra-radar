@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -26,11 +26,40 @@ class Repo(BaseModel):
     pushed_at: datetime | None = None
 
 
-class Match(BaseModel):
+class RepoSnapshot(BaseModel):
+    repo_id: int
+    snapshot_date: date
+    stars: int = 0
+    forks: int = 0
+    open_issues: int | None = None
+    pushed_at: datetime | None = None
+
+
+class PaperTag(BaseModel):
+    paper_id: int
+    tag: str
+    source: str = "rules"
+
+
+class PaperRepoMatch(BaseModel):
     paper_id: int
     repo_id: int
     score: float
     reason: str
+
+
+class Match(PaperRepoMatch):
+    pass
+
+
+class DailyScore(BaseModel):
+    score_date: date
+    tag: str
+    score: float
+    paper_count: int
+    repo_count: int
+    match_count: int
+    star_count: int
 
 
 class TrendScore(BaseModel):
@@ -40,3 +69,10 @@ class TrendScore(BaseModel):
     repo_count: int
     match_count: int
     star_count: int
+
+
+class DigestRecord(BaseModel):
+    digest_date: date
+    path: str
+    title: str
+    content: str = ""
