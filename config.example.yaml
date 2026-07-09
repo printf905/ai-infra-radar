@@ -3,10 +3,21 @@ reports_dir: reports
 
 arxiv:
   enabled: true
-  queries:
-    - 'cat:cs.LG AND ("inference" OR "serving" OR "training systems")'
-    - 'cat:cs.DC AND ("distributed training" OR "GPU")'
   max_results: 25
+
+topics:
+  inference:
+    arxiv_queries:
+      - 'cat:cs.LG AND ("inference" OR "serving")'
+    github_queries:
+      - 'inference server language:Python'
+      - 'llm serving stars:>50'
+  training:
+    arxiv_queries:
+      - 'cat:cs.DC AND ("distributed training" OR "GPU")'
+      - 'cat:cs.LG AND "training systems"'
+    github_queries:
+      - 'distributed training language:Python'
 
 github:
   enabled: true

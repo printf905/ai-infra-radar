@@ -10,9 +10,12 @@ class Paper(BaseModel):
     title: str
     abstract: str = ""
     authors: list[str] = Field(default_factory=list)
+    primary_category: str | None = None
+    categories: list[str] = Field(default_factory=list)
     published_at: datetime | None = None
     updated_at: datetime | None = None
     url: HttpUrl | str
+    pdf_url: HttpUrl | str | None = None
 
 
 class Repo(BaseModel):

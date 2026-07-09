@@ -38,15 +38,30 @@ def init_db(conn: sqlite3.Connection) -> None:
 def upsert_paper(conn: sqlite3.Connection, paper: Paper) -> int:
     conn.execute(
         """
-        INSERT INTO papers (arxiv_id, title, abstract, authors, published_at, updated_at, url)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO papers
+            (
+                arxiv_id,
+                title,
+                abstract,
+                authors,
+                primary_category,
+                categories,
+                published_at,
+                updated_at,
+                url,
+                pdf_url
+            )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(arxiv_id) DO UPDATE SET
             title = excluded.title,
             abstract = excluded.abstract,
             authors = excluded.authors,
+            primary_category = excluded.primary_category,
+            categories = excluded.categories,
             published_at = excluded.published_at,
             updated_at = excluded.updated_at,
             url = excluded.url,
+            pdf_url = excluded.pdf_url,
             ingested_at = CURRENT_TIMESTAMP
         """,
         (
@@ -54,9 +69,12 @@ def upsert_paper(conn: sqlite3.Connection, paper: Paper) -> int:
             paper.title,
             paper.abstract,
             json.dumps(paper.authors),
+            paper.primary_category,
+            json.dumps(paper.categories),
             _iso(paper.published_at),
             _iso(paper.updated_at),
             str(paper.url),
+            str(paper.pdf_url) if paper.pdf_url else None,
         ),
     )
     conn.commit()

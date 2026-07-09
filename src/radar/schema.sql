@@ -6,9 +6,12 @@ CREATE TABLE IF NOT EXISTS papers (
     title TEXT NOT NULL,
     abstract TEXT NOT NULL DEFAULT '',
     authors TEXT NOT NULL DEFAULT '[]',
+    primary_category TEXT,
+    categories TEXT NOT NULL DEFAULT '[]',
     published_at TEXT,
     updated_at TEXT,
     url TEXT NOT NULL,
+    pdf_url TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ingested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

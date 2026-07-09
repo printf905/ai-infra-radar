@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -7,10 +8,10 @@ from typing import Annotated
 
 import typer
 
-from radar.collectors.arxiv_collector import collect_arxiv
+from radar.collectors.arxiv_collector import ingest_arxiv as ingest_arxiv_feed
 from radar.collectors.github_collector import collect_github
 from radar.config import AppConfig, load_config
-from radar.db import connect, init_db, upsert_papers, upsert_repos
+from radar.db import connect, init_db, upsert_repos
 from radar.digest import write_digest
 from radar.matching import match_database
 from radar.scoring import score_database
@@ -18,11 +19,12 @@ from radar.tagging import tag_database
 
 app = typer.Typer(help="AI Infra Radar CLI")
 ConfigPath = Annotated[Path, typer.Option("--config", "-c")]
+DbPath = Annotated[Path | None, typer.Option("--db")]
 
 
-def _load(config: Path) -> tuple[AppConfig, object]:
+def _load(config: Path, db: Path | None = None) -> tuple[AppConfig, sqlite3.Connection]:
     cfg = load_config(config)
-    conn = connect(cfg.database_path)
+    conn = connect(db or cfg.database_path)
     init_db(conn)
     return cfg, conn
 
@@ -35,14 +37,14 @@ def init_db_command(config: ConfigPath = Path("config.yaml")) -> None:
 
 
 @app.command("ingest-arxiv")
-def ingest_arxiv(config: ConfigPath = Path("config.yaml")) -> None:
-    cfg, conn = _load(config)
+def ingest_arxiv(config: ConfigPath = Path("config.yaml"), db: DbPath = None) -> None:
+    cfg, conn = _load(config, db)
     if not cfg.arxiv.enabled:
         typer.echo("arXiv collector disabled")
         return
-    count = upsert_papers(conn, collect_arxiv(cfg.arxiv))
+    result = ingest_arxiv_feed(conn, cfg)
     conn.close()
-    typer.echo(f"Upserted {count} arXiv papers")
+    typer.echo(f"Fetched {result.fetched} arXiv papers; upserted {result.upserted}")
 
 
 @app.command("ingest-github")

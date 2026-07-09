@@ -31,13 +31,28 @@ class ScoringConfig(BaseModel):
     match_weight: float = 2.0
 
 
+class TopicConfig(BaseModel):
+    arxiv_queries: list[str] = Field(default_factory=list)
+    github_queries: list[str] = Field(default_factory=list)
+
+
 class AppConfig(BaseModel):
     database_path: Path = Path("data/radar.sqlite")
     reports_dir: Path = Path("reports")
     arxiv: ArxivConfig = Field(default_factory=ArxivConfig)
     github: GitHubConfig = Field(default_factory=GitHubConfig)
+    topics: dict[str, TopicConfig] = Field(default_factory=dict)
     tagging: TaggingConfig = Field(default_factory=TaggingConfig)
     scoring: ScoringConfig = Field(default_factory=ScoringConfig)
+
+    @property
+    def arxiv_queries(self) -> list[str]:
+        queries: list[str] = []
+        for topic in self.topics.values():
+            queries.extend(topic.arxiv_queries)
+        if not queries:
+            queries.extend(self.arxiv.queries)
+        return list(dict.fromkeys(queries))
 
 
 def load_config(path: Path | str = "config.yaml") -> AppConfig:
