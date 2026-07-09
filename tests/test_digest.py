@@ -31,7 +31,7 @@ def test_digest_contains_top_paper_title(tmp_path) -> None:
     init_db(conn)
     paper_id = _insert_scored_paper(conn, title="Speculative Decoding in Production")
 
-    insert_paper_tags(conn, paper_id, {"llm_inference": 0.95})
+    insert_paper_tags(conn, paper_id, {"inference_optimization": 0.95})
     path = write_digest(conn, tmp_path, date(2026, 7, 9))
 
     assert "Speculative Decoding in Production" in path.read_text(encoding="utf-8")
@@ -81,7 +81,7 @@ def test_digest_includes_matched_repo_and_topic_trends(tmp_path) -> None:
     conn = connect(":memory:")
     init_db(conn)
     paper_id = _insert_scored_paper(conn, title="Agentic Inference Systems")
-    insert_paper_tags(conn, paper_id, {"agents": 0.95, "llm_inference": 0.75})
+    insert_paper_tags(conn, paper_id, {"agents": 0.95, "inference_optimization": 0.75})
     repo_id = upsert_repo(
         conn,
         Repo(
@@ -100,7 +100,7 @@ def test_digest_includes_matched_repo_and_topic_trends(tmp_path) -> None:
 
     assert "example/agent-runtime" in content
     assert "- agents: 1 papers" in content
-    assert "- llm_inference: 1 papers" in content
+    assert "- inference_optimization: 1 papers" in content
 
 
 def _insert_scored_paper(conn, title: str) -> int:

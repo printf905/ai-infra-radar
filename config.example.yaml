@@ -6,69 +6,146 @@ arxiv:
   max_results: 25
 
 topics:
-  llm_inference:
+  # v0.1 tags are rule-based: a paper is tagged when these keywords appear in
+  # its title or abstract. Keep keywords specific to avoid noisy dashboards.
+  post_training:
     weight: 1.0
+    keywords:
+      - post-training
+      - post training
+      - preference optimization
+      - RLHF
+      - DPO
+      - reinforcement learning from human feedback
+      - reward model
+      - alignment
+    arxiv_queries:
+      - 'cat:cs.LG AND ("post-training" OR "preference optimization" OR RLHF OR DPO)'
+    github_queries:
+      - 'RLHF OR DPO language:Python'
+      - 'preference optimization language:Python'
+  fine_tuning:
+    weight: 1.0
+    keywords:
+      - fine-tuning
+      - finetuning
+      - LoRA
+      - QLoRA
+      - adapter
+      - parameter-efficient
+      - PEFT
+    arxiv_queries:
+      - 'cat:cs.LG AND ("fine-tuning" OR LoRA OR QLoRA OR PEFT)'
+    github_queries:
+      - 'LoRA fine-tuning language:Python'
+      - 'QLoRA language:Python'
+  model_compression:
+    weight: 1.0
+    keywords:
+      - quantization
+      - pruning
+      - distillation
+      - compression
+      - sparse
+      - low-rank
+      - edge deployment
+    arxiv_queries:
+      - 'cat:cs.LG AND (quantization OR pruning OR distillation OR compression)'
+    github_queries:
+      - 'LLM quantization language:Python'
+      - 'model compression language:Python'
+  inference_optimization:
+    weight: 1.3
     keywords:
       - inference
       - serving
-      - latency
-      - throughput
+      - batching
       - speculative decoding
+      - constrained decoding
+      - decoding
+      - throughput
+      - latency
+      - vLLM
+      - SGLang
     arxiv_queries:
-      - 'cat:cs.LG AND ("inference" OR "serving")'
+      - 'cat:cs.LG AND ("speculative decoding" OR inference OR serving)'
     github_queries:
       - 'inference server language:Python'
       - 'llm serving stars:>50'
-  training:
-    weight: 0.9
+      - 'vLLM OR SGLang language:Python'
+  long_context:
+    weight: 1.2
     keywords:
-      - training
-      - distributed
-      - checkpoint
+      - long-context
+      - long context
+      - KV cache
+      - attention cache
+      - retrieval cache
+      - context window
     arxiv_queries:
-      - 'cat:cs.DC AND ("distributed training" OR "GPU")'
-      - 'cat:cs.LG AND "training systems"'
+      - 'cat:cs.LG AND ("long context" OR "KV cache" OR "context window")'
     github_queries:
-      - 'distributed training language:Python'
+      - 'long context LLM language:Python'
+      - 'KV cache language:Python'
   agents:
-    weight: 0.8
+    weight: 1.1
     keywords:
       - agent
       - agents
       - tool use
+      - multi-agent
       - planning
+      - code agent
+      - browser agent
+    arxiv_queries:
+      - 'cat:cs.AI AND (agents OR "tool use" OR planning)'
+    github_queries:
+      - 'AI agent tools language:Python'
+      - 'browser agent language:Python'
+  rag:
+    weight: 1.1
+    keywords:
+      - RAG
+      - retrieval augmented generation
+      - retrieval-augmented
+      - retriever
+      - grounding
+      - knowledge base
+    arxiv_queries:
+      - 'cat:cs.CL AND (RAG OR "retrieval augmented generation" OR retriever)'
+    github_queries:
+      - 'RAG retriever language:Python'
+      - 'knowledge base retrieval language:Python'
 
 github:
   enabled: true
   queries:
     - 'inference server language:Python'
     - 'llm serving stars:>50'
-    - 'distributed training language:Python'
+    - 'RAG retriever language:Python'
   max_results: 25
   token_env: GITHUB_TOKEN
 
 tagging:
   keywords:
-    inference:
+    inference_optimization:
       - inference
       - serving
       - latency
       - throughput
-    training:
-      - training
-      - distributed
-      - checkpoint
-    quantization:
+      - speculative decoding
+    model_compression:
       - quantization
-      - quantized
-      - int8
-      - fp8
-    retrieval:
-      - retrieval
-      - rag
-      - vector
+      - pruning
+      - distillation
+      - compression
+    rag:
+      - RAG
+      - retrieval augmented generation
+      - retriever
     agents:
       - agent
+      - agents
       - tool use
       - planning
 

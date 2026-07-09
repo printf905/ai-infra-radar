@@ -164,7 +164,7 @@ def test_tag_papers_cli_works_after_paper_tags_migration(tmp_path: Path) -> None
     config_path.write_text(
         """
 topics:
-  llm_inference:
+  inference_optimization:
     weight: 1.0
     keywords:
       - speculative decoding
@@ -211,6 +211,6 @@ topics:
 
     assert "confidence" in columns
     assert "source" in columns
-    assert rows[0]["tag"] == "llm_inference"
+    assert rows[0]["tag"] == "inference_optimization"
     assert rows[0]["confidence"] == 0.95
     assert rows[0]["source"] == "rules"

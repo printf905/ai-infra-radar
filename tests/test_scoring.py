@@ -10,7 +10,7 @@ from radar.scoring import score_papers
 def test_fresh_relevant_paper_scores_higher_than_old_paper() -> None:
     conn = connect(":memory:")
     init_db(conn)
-    config = AppConfig(topics={"llm_inference": TopicConfig(weight=1.0)})
+    config = AppConfig(topics={"inference_optimization": TopicConfig(weight=1.3)})
     fresh_id = upsert_paper(
         conn,
         Paper(
@@ -29,8 +29,8 @@ def test_fresh_relevant_paper_scores_higher_than_old_paper() -> None:
             url="https://arxiv.org/abs/2401.2",
         ),
     )
-    replace_paper_tags(conn, fresh_id, {"llm_inference": 0.95})
-    replace_paper_tags(conn, old_id, {"llm_inference": 0.95})
+    replace_paper_tags(conn, fresh_id, {"inference_optimization": 0.95})
+    replace_paper_tags(conn, old_id, {"inference_optimization": 0.95})
 
     scores = score_papers(conn, config, today=date(2026, 7, 9))
     by_paper_id = {score.paper_id: score.score for score in scores}
@@ -41,7 +41,7 @@ def test_fresh_relevant_paper_scores_higher_than_old_paper() -> None:
 def test_score_is_between_zero_and_one() -> None:
     conn = connect(":memory:")
     init_db(conn)
-    config = AppConfig(topics={"llm_inference": TopicConfig(weight=2.0)})
+    config = AppConfig(topics={"inference_optimization": TopicConfig(weight=2.0)})
     paper_id = upsert_paper(
         conn,
         Paper(
@@ -51,7 +51,7 @@ def test_score_is_between_zero_and_one() -> None:
             url="https://arxiv.org/abs/2401.3",
         ),
     )
-    replace_paper_tags(conn, paper_id, {"llm_inference": 0.95})
+    replace_paper_tags(conn, paper_id, {"inference_optimization": 0.95})
 
     score = score_papers(conn, config, today=date(2026, 7, 9))[0].score
 
