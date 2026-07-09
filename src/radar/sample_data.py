@@ -175,13 +175,13 @@ def _load_scores(conn: sqlite3.Connection, paper_ids: dict[str, int]) -> int:
         DailyScore(
             score_date=SAMPLE_DATE,
             paper_id=paper_ids["2607.00001"],
-            score=0.6825,
+            score=0.805,
             components_json=json.dumps(
                 {
                     "topic_relevance": 1.0,
                     "recency": 1.0,
-                    "github_momentum": 0.0,
-                    "implementation_confidence": 0.0,
+                    "repo_match_confidence": 0.82,
+                    "repo_momentum": 0.0,
                     "anomaly_score": 0.0,
                 },
                 sort_keys=True,
@@ -190,13 +190,13 @@ def _load_scores(conn: sqlite3.Connection, paper_ids: dict[str, int]) -> int:
         DailyScore(
             score_date=SAMPLE_DATE,
             paper_id=paper_ids["2607.00002"],
-            score=0.595,
+            score=0.715,
             components_json=json.dumps(
                 {
                     "topic_relevance": 1.0,
                     "recency": 0.7,
-                    "github_momentum": 0.0,
-                    "implementation_confidence": 0.0,
+                    "repo_match_confidence": 0.76,
+                    "repo_momentum": 0.0,
                     "anomaly_score": 0.0,
                 },
                 sort_keys=True,
@@ -205,13 +205,13 @@ def _load_scores(conn: sqlite3.Connection, paper_ids: dict[str, int]) -> int:
         DailyScore(
             score_date=SAMPLE_DATE,
             paper_id=paper_ids["2607.00003"],
-            score=0.5075,
+            score=0.63,
             components_json=json.dumps(
                 {
                     "topic_relevance": 1.0,
                     "recency": 0.4,
-                    "github_momentum": 0.0,
-                    "implementation_confidence": 0.0,
+                    "repo_match_confidence": 0.72,
+                    "repo_momentum": 0.0,
                     "anomaly_score": 0.0,
                 },
                 sort_keys=True,

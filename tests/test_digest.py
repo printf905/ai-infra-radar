@@ -35,6 +35,7 @@ def test_digest_contains_top_paper_title(tmp_path) -> None:
     path = write_digest(conn, tmp_path, date(2026, 7, 9))
 
     assert "Speculative Decoding in Production" in path.read_text(encoding="utf-8")
+    assert "Why it ranks:" in path.read_text(encoding="utf-8")
 
 
 def test_empty_db_still_creates_valid_digest(tmp_path) -> None:

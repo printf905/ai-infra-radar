@@ -57,7 +57,8 @@ def _top_paper_lines(conn: sqlite3.Connection, report_date: date) -> list[str]:
             p.authors,
             p.published_at,
             p.url,
-            ds.score
+            ds.score,
+            ds.components_json
         FROM daily_scores ds
         JOIN papers p ON p.id = ds.paper_id
         WHERE ds.score_date = ?
@@ -81,6 +82,7 @@ def _top_paper_lines(conn: sqlite3.Connection, report_date: date) -> list[str]:
                 f"- Published: {_published_date(row['published_at'])}",
                 f"- Tags: {', '.join(tags) if tags else 'No tags yet'}",
                 f"- Score: {row['score']}",
+                f"- Why it ranks: {_why_it_ranks(row['components_json'])}",
                 f"- Summary: {_abstract_summary(row['abstract'])}",
                 f"- arXiv: {row['url']}",
                 f"- Matched GitHub repo: {matched_repo}",
@@ -165,6 +167,29 @@ def _authors(raw_authors: object) -> str:
     if not authors:
         return "Unknown"
     return ", ".join(str(author) for author in authors)
+
+
+def _why_it_ranks(raw_components: object) -> str:
+    if not isinstance(raw_components, str) or not raw_components:
+        return "No score components recorded."
+    try:
+        components = json.loads(raw_components)
+    except json.JSONDecodeError:
+        return "No score components recorded."
+    reasons: list[str] = []
+    topic_relevance = float(components.get("topic_relevance", 0.0))
+    recency = float(components.get("recency", 0.0))
+    repo_match = float(components.get("repo_match_confidence", 0.0))
+    repo_momentum = float(components.get("repo_momentum", 0.0))
+    if topic_relevance > 0:
+        reasons.append(f"topic relevance {topic_relevance:.2f}")
+    if recency > 0:
+        reasons.append(f"recency {recency:.2f}")
+    if repo_match > 0:
+        reasons.append(f"repo match {repo_match:.2f}")
+    if repo_momentum > 0:
+        reasons.append(f"repo momentum {repo_momentum:.2f}")
+    return "; ".join(reasons) if reasons else "Baseline heuristic score."
 
 
 def _published_date(raw_published_at: object) -> str:

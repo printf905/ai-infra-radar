@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS paper_repo_matches (
     repo_id INTEGER NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
     score REAL NOT NULL,
     reason TEXT NOT NULL,
+    match_type TEXT NOT NULL DEFAULT 'heuristic',
+    confidence REAL NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (paper_id, repo_id)

@@ -53,6 +53,8 @@ class PaperRepoMatch(BaseModel):
     repo_id: int
     score: float
     reason: str
+    match_type: str = "heuristic"
+    confidence: float | None = None
 
 
 class Match(PaperRepoMatch):

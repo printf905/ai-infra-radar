@@ -24,6 +24,7 @@ ConfigPath = Annotated[Path, typer.Option("--config", "-c")]
 DbPath = Annotated[Path | None, typer.Option("--db")]
 DigestDate = Annotated[str, typer.Option("--date")]
 SampleDbPath = Annotated[Path, typer.Option("--db")]
+FetchReadme = Annotated[bool, typer.Option("--fetch-readme")]
 
 
 def _load(config: Path, db: Path | None = None) -> tuple[AppConfig, sqlite3.Connection]:
@@ -82,9 +83,25 @@ def tag_papers(config: ConfigPath = Path("config.yaml"), db: DbPath = None) -> N
 
 
 @app.command("match")
-def match(config: ConfigPath = Path("config.yaml")) -> None:
-    _, conn = _load(config)
-    count = match_database(conn)
+def match(
+    config: ConfigPath = Path("config.yaml"),
+    db: DbPath = None,
+    fetch_readme: FetchReadme = False,
+) -> None:
+    _, conn = _load(config, db)
+    count = match_database(conn, fetch_readme=fetch_readme)
+    conn.close()
+    typer.echo(f"Upserted {count} paper/repo matches")
+
+
+@app.command("match-repos")
+def match_repos(
+    db: SampleDbPath = Path("data/radar.db"),
+    fetch_readme: FetchReadme = False,
+) -> None:
+    conn = connect(db)
+    init_db(conn)
+    count = match_database(conn, fetch_readme=fetch_readme)
     conn.close()
     typer.echo(f"Upserted {count} paper/repo matches")
 

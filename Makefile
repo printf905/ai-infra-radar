@@ -11,6 +11,7 @@ pipeline:
 	python -m radar.cli ingest-github --config config.example.yaml --db $(DB)
 	python -m radar.cli tag-papers --config config.example.yaml --db $(DB)
 	python -m radar.cli score --config config.example.yaml --db $(DB)
+	python -m radar.cli match-repos --db $(DB)
 	python -m radar.cli digest --config config.example.yaml --db $(DB) --date today
 
 dashboard:

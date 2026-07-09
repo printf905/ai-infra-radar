@@ -71,6 +71,10 @@ def run_lightweight_migrations(conn: sqlite3.Connection) -> None:
             "components_json": "TEXT NOT NULL DEFAULT '{}'",
             "scored_at": "TEXT",
         },
+        "paper_repo_matches": {
+            "match_type": "TEXT NOT NULL DEFAULT 'heuristic'",
+            "confidence": "REAL NOT NULL DEFAULT 0",
+        },
     }
     for table_name, columns in migrations.items():
         if not _table_exists(conn, table_name):
@@ -313,14 +317,27 @@ def upsert_matches(conn: sqlite3.Connection, matches: Iterable[Match]) -> int:
     rows = list(matches)
     conn.executemany(
         """
-        INSERT INTO paper_repo_matches (paper_id, repo_id, score, reason)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO paper_repo_matches
+            (paper_id, repo_id, score, reason, match_type, confidence)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(paper_id, repo_id) DO UPDATE SET
             score = excluded.score,
             reason = excluded.reason,
+            match_type = excluded.match_type,
+            confidence = excluded.confidence,
             updated_at = CURRENT_TIMESTAMP
         """,
-        [(match.paper_id, match.repo_id, match.score, match.reason) for match in rows],
+        [
+            (
+                match.paper_id,
+                match.repo_id,
+                match.score,
+                match.reason,
+                match.match_type,
+                match.confidence if match.confidence is not None else match.score,
+            )
+            for match in rows
+        ],
     )
     conn.commit()
     return len(rows)

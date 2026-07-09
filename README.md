@@ -12,6 +12,7 @@ AI Infra Radar is a local-first dashboard for AI infrastructure trends across ar
 - Scores papers with simple relevance and recency heuristics.
 - Generates a daily Markdown digest.
 - Shows everything in a local Streamlit dashboard.
+- Links papers to likely GitHub implementations with explainable heuristics.
 
 ## Quick Start
 
@@ -69,6 +70,7 @@ python -m radar.cli ingest-arxiv --config config.example.yaml --db data/radar.db
 python -m radar.cli ingest-github --config config.example.yaml --db data/radar.db
 python -m radar.cli tag-papers --config config.example.yaml --db data/radar.db
 python -m radar.cli score --config config.example.yaml --db data/radar.db
+python -m radar.cli match-repos --db data/radar.db
 python -m radar.cli digest --config config.example.yaml --db data/radar.db --date today
 streamlit run app/streamlit_app.py
 ```

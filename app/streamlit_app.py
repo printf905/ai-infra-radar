@@ -39,7 +39,7 @@ def main() -> None:
         db_path = st.text_input("DB path", value=args.db)
         page = st.selectbox(
             "Page",
-            ["Overview", "Papers", "Repositories", "Daily Digest"],
+            ["Overview", "Papers", "Repositories", "Paper ↔ Repo Matches", "Daily Digest"],
         )
         topic_filter = st.selectbox("Topic tag", _topic_options(db_path))
         keyword = st.text_input("Keyword search")
@@ -69,6 +69,8 @@ def main() -> None:
         _render_papers(papers)
     elif page == "Repositories":
         _render_repositories(repos)
+    elif page == "Paper ↔ Repo Matches":
+        _render_matches(load_matches(db_path))
     else:
         _render_daily_digest()
 
@@ -144,6 +146,28 @@ def load_repositories(db_path: str) -> pd.DataFrame:
                 url AS html_url
             FROM repos
             ORDER BY stars DESC, pushed_at DESC
+            """,
+            conn,
+        )
+
+
+@st.cache_data(show_spinner=False)
+def load_matches(db_path: str) -> pd.DataFrame:
+    with sqlite3.connect(db_path) as conn:
+        return pd.read_sql_query(
+            """
+            SELECT
+                p.title AS paper_title,
+                r.full_name AS repo,
+                m.match_type,
+                m.confidence,
+                m.reason,
+                p.url AS paper_url,
+                r.url AS repo_url
+            FROM paper_repo_matches m
+            JOIN papers p ON p.id = m.paper_id
+            JOIN repos r ON r.id = m.repo_id
+            ORDER BY m.confidence DESC, m.updated_at DESC
             """,
             conn,
         )
@@ -239,21 +263,24 @@ def _render_overview(db_path: str, papers: pd.DataFrame, repos: pd.DataFrame) ->
 
 def _render_papers(papers: pd.DataFrame) -> None:
     st.subheader("Papers")
-    columns = [
-        "title",
-        "authors",
-        "published_at",
-        "tags",
-        "score",
-        "score_components",
-        "url",
-    ]
+    columns = ["title", "authors", "published_at", "tags", "score", "url"]
     _dataframe(papers[columns], empty_message="No papers match the current filters.")
+    if not papers.empty and "score_components" in papers:
+        with st.expander("Score components"):
+            _dataframe(
+                papers[["title", "score", "score_components"]],
+                empty_message="No score components recorded.",
+            )
 
 
 def _render_repositories(repos: pd.DataFrame) -> None:
     st.subheader("Repositories")
     _dataframe(repos, empty_message="No repositories ingested yet.")
+
+
+def _render_matches(matches: pd.DataFrame) -> None:
+    st.subheader("Paper ↔ Repo Matches")
+    _dataframe(matches, empty_message="No paper/repo matches yet.")
 
 
 def _render_daily_digest() -> None:

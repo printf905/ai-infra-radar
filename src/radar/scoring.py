@@ -17,16 +17,19 @@ def score_papers(
     score_date = today or date.today()
     scores: list[DailyScore] = []
     for paper in conn.execute("SELECT id, published_at FROM papers").fetchall():
+        paper_id = int(paper["id"])
         components = score_components(
             published_at=_parse_datetime(paper["published_at"]),
-            tag_confidences=_paper_tag_confidences(conn, int(paper["id"])),
+            tag_confidences=_paper_tag_confidences(conn, paper_id),
             topic_weights=config.topic_weights,
+            repo_match_confidence=_repo_match_confidence(conn, paper_id),
+            repo_momentum=_repo_momentum(conn, paper_id),
             today=score_date,
         )
         score = final_score(components)
         daily_score = DailyScore(
             score_date=score_date,
-            paper_id=int(paper["id"]),
+            paper_id=paper_id,
             score=score,
             components_json=json.dumps(components, sort_keys=True),
         )
@@ -39,16 +42,18 @@ def score_components(
     published_at: datetime | None,
     tag_confidences: dict[str, float],
     topic_weights: dict[str, float],
+    repo_match_confidence: float = 0.0,
+    repo_momentum: float = 0.0,
     today: date | None = None,
 ) -> dict[str, float]:
     topic_relevance = 0.0
     for tag, confidence in tag_confidences.items():
         topic_relevance = max(topic_relevance, confidence * topic_weights.get(tag, 1.0))
     return {
-        "topic_relevance": round(min(topic_relevance, 1.0), 4),
+        "topic_relevance": round(_clip(topic_relevance), 4),
         "recency": recency_score(published_at, today=today),
-        "github_momentum": 0.0,
-        "implementation_confidence": 0.0,
+        "repo_match_confidence": round(_clip(repo_match_confidence), 4),
+        "repo_momentum": round(_clip(repo_momentum), 4),
         "anomaly_score": 0.0,
     }
 
@@ -57,11 +62,11 @@ def final_score(components: dict[str, float]) -> float:
     score = (
         0.35 * components["topic_relevance"]
         + 0.25 * components["recency"]
-        + 0.20 * components["github_momentum"]
-        + 0.10 * components["implementation_confidence"]
-        + 0.10 * components["anomaly_score"]
+        + 0.25 * components["repo_match_confidence"]
+        + 0.10 * components["repo_momentum"]
+        + 0.05 * components["anomaly_score"]
     )
-    return round(min(max(score, 0.0), 1.0), 4)
+    return round(_clip(score), 4)
 
 
 def recency_score(published_at: datetime | None, today: date | None = None) -> float:
@@ -92,6 +97,42 @@ def _paper_tag_confidences(conn: sqlite3.Connection, paper_id: int) -> dict[str,
     }
 
 
+def _repo_match_confidence(conn: sqlite3.Connection, paper_id: int) -> float:
+    row = conn.execute(
+        """
+        SELECT MAX(CASE WHEN confidence > 0 THEN confidence ELSE score END) AS value
+        FROM paper_repo_matches
+        WHERE paper_id = ?
+        """,
+        (paper_id,),
+    ).fetchone()
+    return _clip(float(row["value"] or 0.0)) if row else 0.0
+
+
+def _repo_momentum(conn: sqlite3.Connection, paper_id: int) -> float:
+    rows = conn.execute(
+        """
+        SELECT rs.repo_id, rs.captured_at, rs.stars
+        FROM paper_repo_matches m
+        JOIN repo_snapshots rs ON rs.repo_id = m.repo_id
+        WHERE m.paper_id = ?
+        ORDER BY rs.repo_id, rs.captured_at
+        """,
+        (paper_id,),
+    ).fetchall()
+    snapshots: dict[int, list[sqlite3.Row]] = {}
+    for row in rows:
+        snapshots.setdefault(int(row["repo_id"]), []).append(row)
+
+    momentum = 0.0
+    for repo_rows in snapshots.values():
+        if len(repo_rows) < 2:
+            continue
+        star_delta = int(repo_rows[-1]["stars"] or 0) - int(repo_rows[0]["stars"] or 0)
+        momentum = max(momentum, star_delta / 100.0)
+    return _clip(momentum)
+
+
 def _parse_datetime(value: object) -> datetime | None:
     if not isinstance(value, str) or not value:
         return None
@@ -99,3 +140,7 @@ def _parse_datetime(value: object) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed
+
+
+def _clip(value: float) -> float:
+    return min(max(value, 0.0), 1.0)
