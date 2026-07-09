@@ -311,7 +311,7 @@ def _dataframe(df: pd.DataFrame, empty_message: str) -> None:
     if df.empty:
         st.caption(empty_message)
         return
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 def _single_int(conn: sqlite3.Connection, query: str) -> int:

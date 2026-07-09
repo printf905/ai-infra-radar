@@ -40,6 +40,16 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
+## GitHub Token
+
+Set a GitHub token for better GitHub Search API coverage:
+
+```bash
+export GITHUB_TOKEN="..."
+```
+
+Without a token, the GitHub Search API may return partial results due to rate limits.
+
 ## Run the Pipeline
 
 ```bash
@@ -62,7 +72,7 @@ The dashboard defaults to `data/radar.db` and shows setup commands if the databa
 
 ## Reliability Note
 
-arXiv and GitHub metadata comes from public APIs. Topic tags and scores are rule-based heuristics in v0.1. Ranking is for exploration, not definitive research evaluation.
+arXiv and GitHub metadata comes from public APIs. Topic tags and scores are rule-based heuristics in v0.1. Ranking is for exploration, not definitive research evaluation. GitHub results may be partial if rate limited.
 
 ## Roadmap
 
