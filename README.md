@@ -30,7 +30,7 @@ make demo-dashboard
 
 `make demo-dashboard` launches Streamlit with `RADAR_DB_PATH=data/sample/sample.db`, so the dashboard opens against the sample database automatically.
 
-Screenshot coming soon.
+![AI Infra Radar Dashboard](docs/images/dashboard.png)
 
 ## One-Command Local Run
 
