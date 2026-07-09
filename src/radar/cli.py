@@ -9,9 +9,9 @@ from typing import Annotated
 import typer
 
 from radar.collectors.arxiv_collector import ingest_arxiv as ingest_arxiv_feed
-from radar.collectors.github_collector import collect_github
+from radar.collectors.github_collector import ingest_github as ingest_github_feed
 from radar.config import AppConfig, load_config
-from radar.db import connect, init_db, upsert_repos
+from radar.db import connect, init_db
 from radar.digest import write_digest
 from radar.matching import match_database
 from radar.scoring import score_database
@@ -48,14 +48,17 @@ def ingest_arxiv(config: ConfigPath = Path("config.yaml"), db: DbPath = None) ->
 
 
 @app.command("ingest-github")
-def ingest_github(config: ConfigPath = Path("config.yaml")) -> None:
-    cfg, conn = _load(config)
+def ingest_github(config: ConfigPath = Path("config.yaml"), db: DbPath = None) -> None:
+    cfg, conn = _load(config, db)
     if not cfg.github.enabled:
         typer.echo("GitHub collector disabled")
         return
-    count = upsert_repos(conn, collect_github(cfg.github))
+    result = ingest_github_feed(conn, cfg)
     conn.close()
-    typer.echo(f"Upserted {count} GitHub repositories")
+    typer.echo(
+        f"Fetched {result.fetched} GitHub repositories; "
+        f"upserted {result.upserted}; snapshots {result.snapshots}"
+    )
 
 
 @app.command("tag")

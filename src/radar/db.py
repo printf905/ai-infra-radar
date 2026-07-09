@@ -92,15 +92,30 @@ def upsert_repo(conn: sqlite3.Connection, repo: Repo) -> int:
     conn.execute(
         """
         INSERT INTO repos
-            (github_id, full_name, description, url, stars, forks, language, pushed_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (
+                github_id,
+                full_name,
+                description,
+                url,
+                stars,
+                forks,
+                open_issues,
+                language,
+                created_at,
+                updated_at,
+                pushed_at
+            )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(github_id) DO UPDATE SET
             full_name = excluded.full_name,
             description = excluded.description,
             url = excluded.url,
             stars = excluded.stars,
             forks = excluded.forks,
+            open_issues = excluded.open_issues,
             language = excluded.language,
+            created_at = excluded.created_at,
+            updated_at = excluded.updated_at,
             pushed_at = excluded.pushed_at,
             ingested_at = CURRENT_TIMESTAMP
         """,
@@ -111,7 +126,10 @@ def upsert_repo(conn: sqlite3.Connection, repo: Repo) -> int:
             str(repo.url),
             repo.stars,
             repo.forks,
+            repo.open_issues,
             repo.language,
+            _iso(repo.created_at),
+            _iso(repo.updated_at),
             _iso(repo.pushed_at),
         ),
     )
@@ -130,9 +148,9 @@ def insert_repo_snapshot(conn: sqlite3.Connection, snapshot: RepoSnapshot) -> in
     conn.execute(
         """
         INSERT INTO repo_snapshots
-            (repo_id, snapshot_date, stars, forks, open_issues, pushed_at)
+            (repo_id, captured_at, stars, forks, open_issues, pushed_at)
         VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(repo_id, snapshot_date) DO UPDATE SET
+        ON CONFLICT(repo_id, captured_at) DO UPDATE SET
             stars = excluded.stars,
             forks = excluded.forks,
             open_issues = excluded.open_issues,
@@ -140,7 +158,7 @@ def insert_repo_snapshot(conn: sqlite3.Connection, snapshot: RepoSnapshot) -> in
         """,
         (
             snapshot.repo_id,
-            snapshot.snapshot_date.isoformat(),
+            snapshot.captured_at.isoformat(),
             snapshot.stars,
             snapshot.forks,
             snapshot.open_issues,
@@ -150,8 +168,8 @@ def insert_repo_snapshot(conn: sqlite3.Connection, snapshot: RepoSnapshot) -> in
     conn.commit()
     return _required_id(
         conn,
-        "SELECT id FROM repo_snapshots WHERE repo_id = ? AND snapshot_date = ?",
-        (snapshot.repo_id, snapshot.snapshot_date.isoformat()),
+        "SELECT id FROM repo_snapshots WHERE repo_id = ? AND captured_at = ?",
+        (snapshot.repo_id, snapshot.captured_at.isoformat()),
     )
 
 

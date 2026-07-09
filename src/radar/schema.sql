@@ -24,22 +24,24 @@ CREATE TABLE IF NOT EXISTS repos (
     url TEXT NOT NULL,
     stars INTEGER NOT NULL DEFAULT 0,
     forks INTEGER NOT NULL DEFAULT 0,
+    open_issues INTEGER NOT NULL DEFAULT 0,
     language TEXT,
+    updated_at TEXT,
     pushed_at TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT,
     ingested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS repo_snapshots (
     id INTEGER PRIMARY KEY,
     repo_id INTEGER NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
-    snapshot_date TEXT NOT NULL,
+    captured_at TEXT NOT NULL,
     stars INTEGER NOT NULL DEFAULT 0,
     forks INTEGER NOT NULL DEFAULT 0,
-    open_issues INTEGER,
+    open_issues INTEGER NOT NULL DEFAULT 0,
     pushed_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (repo_id, snapshot_date)
+    UNIQUE (repo_id, captured_at)
 );
 
 CREATE TABLE IF NOT EXISTS paper_tags (

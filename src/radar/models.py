@@ -25,16 +25,19 @@ class Repo(BaseModel):
     url: HttpUrl | str
     stars: int = 0
     forks: int = 0
+    open_issues: int = 0
     language: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
     pushed_at: datetime | None = None
 
 
 class RepoSnapshot(BaseModel):
     repo_id: int
-    snapshot_date: date
+    captured_at: date
     stars: int = 0
     forks: int = 0
-    open_issues: int | None = None
+    open_issues: int = 0
     pushed_at: datetime | None = None
 
 

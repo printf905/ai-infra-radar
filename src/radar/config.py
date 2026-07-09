@@ -54,6 +54,15 @@ class AppConfig(BaseModel):
             queries.extend(self.arxiv.queries)
         return list(dict.fromkeys(queries))
 
+    @property
+    def github_queries(self) -> list[str]:
+        queries: list[str] = []
+        for topic in self.topics.values():
+            queries.extend(topic.github_queries)
+        if not queries:
+            queries.extend(self.github.queries)
+        return list(dict.fromkeys(queries))
+
 
 def load_config(path: Path | str = "config.yaml") -> AppConfig:
     config_path = Path(path)

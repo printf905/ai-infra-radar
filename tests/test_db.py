@@ -109,7 +109,7 @@ def test_insert_repo_snapshot_is_idempotent_for_same_date() -> None:
     )
     snapshot = RepoSnapshot(
         repo_id=repo_id,
-        snapshot_date=date(2026, 7, 9),
+        captured_at=date(2026, 7, 9),
         stars=20,
         forks=2,
     )
