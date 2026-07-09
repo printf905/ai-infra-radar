@@ -2,28 +2,35 @@
 
 Track which AI research ideas are turning into real code.
 
-AI Infra Radar is a local-first open-source data product for monitoring AI infrastructure research trends. The first version tracks arXiv papers and GitHub repositories, stores them in SQLite, tags infrastructure themes, matches papers to repos, scores momentum, and generates Markdown digests plus a Streamlit dashboard.
+AI Infra Radar is a local-first dashboard for AI infrastructure trends across arXiv and GitHub. It collects public metadata, stores it in SQLite, applies rule-based topic tags, computes exploratory scores, generates Markdown digests, and renders a Streamlit dashboard.
+
+![Dashboard placeholder](docs/images/dashboard.png)
+
+## Why This Exists
+
+AI infrastructure ideas move quickly from papers to repositories. AI Infra Radar helps researchers, engineers, and open-source maintainers see which topics are gaining implementation traction without relying on paid APIs, private datasets, or fragile scraping.
+
+## Features
+
+- arXiv Atom feed ingestion.
+- GitHub repository search ingestion.
+- Local SQLite persistence with idempotent upserts.
+- Rule-based topic tagging for public v0.1 taxonomy.
+- Paper-level heuristic scoring.
+- Daily Markdown digest generation.
+- Streamlit dashboard for papers, repos, topic trends, and digests.
 
 ## Architecture
 
 ```text
-config.yaml
+config.example.yaml
   -> collectors
   -> SQLite
   -> tagging
-  -> paper/repo matching
   -> scoring
   -> Markdown digest
   -> Streamlit dashboard
 ```
-
-The project intentionally starts simple:
-
-- Public APIs only: arXiv Atom feeds and GitHub Search API.
-- No paid LLM API requirement.
-- No fragile HTML scraping.
-- Local SQLite database with idempotent upserts.
-- Small typed Python modules that can be tested without network access.
 
 ## Quick Start
 
@@ -31,42 +38,46 @@ The project intentionally starts simple:
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-cp config.example.yaml config.yaml
-python -m radar init-db
 ```
 
-## Example Commands
+## Run the Pipeline
 
 ```bash
-python -m radar ingest-arxiv --config config.yaml
-python -m radar ingest-github --config config.yaml
-python -m radar tag --config config.yaml
-python -m radar match --config config.yaml
-python -m radar score --config config.yaml
-python -m radar digest --config config.yaml --date today
-python -m radar dashboard --config config.yaml
+python -m radar.cli ingest-arxiv --config config.example.yaml --db data/radar.db
+python -m radar.cli ingest-github --config config.example.yaml --db data/radar.db
+python -m radar.cli tag-papers --config config.example.yaml --db data/radar.db
+python -m radar.cli score --config config.example.yaml --db data/radar.db
+python -m radar.cli digest --config config.example.yaml --db data/radar.db --date today
+```
+
+![Digest placeholder](docs/images/digest.png)
+
+## Launch Dashboard
+
+```bash
 streamlit run app/streamlit_app.py
 ```
 
-Equivalent Make targets are available:
+The dashboard defaults to `data/radar.db` and shows setup commands if the database does not exist.
 
-```bash
-make init-db
-make ingest-arxiv
-make ingest-github
-make tag
-make score
-make digest
-make dashboard
-```
+## Reliability Note
+
+arXiv and GitHub metadata comes from public APIs. Topic tags and scores are rule-based heuristics in v0.1. Ranking is for exploration, not definitive research evaluation.
 
 ## Roadmap
 
-- v0.1: arXiv and GitHub collectors, SQLite schema, rule-based tagging, simple matching, scoring, digest, dashboard.
-- v0.2: richer trend queries, better deduplication, saved search presets, expanded tests.
-- v0.3: Hugging Face dataset/model integration.
-- Later: hosted-friendly deployment docs, richer evaluation of paper-to-code adoption, optional embeddings.
+- Paper-to-repo matching.
+- Repo star growth snapshots.
+- Hugging Face model tracking.
+- Anomaly detection.
+- GitHub Actions daily run.
+- Sample mode.
 
-## Open-Source Positioning
+## Contributing
 
-AI Infra Radar is designed as a transparent local-first tool for researchers, engineers, investors, and open-source maintainers who want to understand which AI infrastructure ideas are gaining implementation traction. It should remain useful without proprietary APIs, hidden datasets, or secret prompts.
+Contributions are welcome. Keep changes local-first, deterministic where possible, and covered by focused tests. Run the checks before opening a PR:
+
+```bash
+python -m pytest
+ruff check .
+```
