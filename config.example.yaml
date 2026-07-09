@@ -1,0 +1,49 @@
+database_path: data/radar.sqlite
+reports_dir: reports
+
+arxiv:
+  enabled: true
+  queries:
+    - 'cat:cs.LG AND ("inference" OR "serving" OR "training systems")'
+    - 'cat:cs.DC AND ("distributed training" OR "GPU")'
+  max_results: 25
+
+github:
+  enabled: true
+  queries:
+    - 'inference server language:Python'
+    - 'llm serving stars:>50'
+    - 'distributed training language:Python'
+  max_results: 25
+  token_env: GITHUB_TOKEN
+
+tagging:
+  keywords:
+    inference:
+      - inference
+      - serving
+      - latency
+      - throughput
+    training:
+      - training
+      - distributed
+      - checkpoint
+    quantization:
+      - quantization
+      - quantized
+      - int8
+      - fp8
+    retrieval:
+      - retrieval
+      - rag
+      - vector
+    agents:
+      - agent
+      - tool use
+      - planning
+
+scoring:
+  paper_weight: 1.0
+  repo_weight: 1.0
+  star_weight: 0.05
+  match_weight: 2.0
