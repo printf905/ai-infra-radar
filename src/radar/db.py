@@ -31,7 +31,52 @@ def connect(database_path: Path | str) -> sqlite3.Connection:
 def init_db(conn: sqlite3.Connection) -> None:
     schema = files("radar").joinpath("schema.sql").read_text(encoding="utf-8")
     conn.executescript(schema)
+    run_lightweight_migrations(conn)
     conn.commit()
+
+
+def get_table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
+    query = f"PRAGMA table_info({_quote_ident(table_name)})"
+    return {str(row["name"]) for row in conn.execute(query)}
+
+
+def ensure_column(
+    conn: sqlite3.Connection,
+    table_name: str,
+    column_name: str,
+    column_type: str,
+) -> None:
+    if column_name in get_table_columns(conn, table_name):
+        return
+    conn.execute(
+        f"ALTER TABLE {_quote_ident(table_name)} "
+        f"ADD COLUMN {_quote_ident(column_name)} {column_type}"
+    )
+
+
+def run_lightweight_migrations(conn: sqlite3.Connection) -> None:
+    migrations = {
+        "repos": {
+            "open_issues": "INTEGER NOT NULL DEFAULT 0",
+            "pushed_at": "TEXT",
+        },
+        "repo_snapshots": {
+            "open_issues": "INTEGER NOT NULL DEFAULT 0",
+        },
+        "paper_tags": {
+            "confidence": "REAL NOT NULL DEFAULT 0",
+            "source": "TEXT NOT NULL DEFAULT 'rules'",
+        },
+        "daily_scores": {
+            "components_json": "TEXT NOT NULL DEFAULT '{}'",
+            "scored_at": "TEXT",
+        },
+    }
+    for table_name, columns in migrations.items():
+        if not _table_exists(conn, table_name):
+            continue
+        for column_name, column_type in columns.items():
+            ensure_column(conn, table_name, column_name, column_type)
 
 
 def upsert_paper(conn: sqlite3.Connection, paper: Paper) -> int:
@@ -309,3 +354,15 @@ def _tag_confidences(tags: Iterable[str] | Mapping[str, float]) -> dict[str, flo
     if isinstance(tags, Mapping):
         return {tag.strip(): confidence for tag, confidence in tags.items() if tag.strip()}
     return {tag.strip(): 0.0 for tag in tags if tag.strip()}
+
+
+def _table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,),
+    ).fetchone()
+    return row is not None
+
+
+def _quote_ident(identifier: str) -> str:
+    return '"' + identifier.replace('"', '""') + '"'

@@ -43,7 +43,7 @@ python -m radar ingest-github --config config.yaml
 python -m radar tag --config config.yaml
 python -m radar match --config config.yaml
 python -m radar score --config config.yaml
-python -m radar digest --config config.yaml
+python -m radar digest --config config.yaml --date today
 python -m radar dashboard --config config.yaml
 ```
 

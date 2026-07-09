@@ -1,8 +1,14 @@
+import sqlite3
 from datetime import date
+from pathlib import Path
 
+from typer.testing import CliRunner
+
+from radar.cli import app
 from radar.db import (
     connect,
     fetch_all,
+    get_table_columns,
     init_db,
     insert_paper_tags,
     insert_repo_snapshot,
@@ -10,6 +16,8 @@ from radar.db import (
     upsert_repo,
 )
 from radar.models import Paper, Repo, RepoSnapshot
+
+runner = CliRunner()
 
 
 def test_init_db_creates_all_tables() -> None:
@@ -121,3 +129,88 @@ def test_insert_repo_snapshot_is_idempotent_for_same_date() -> None:
     assert first_id == second_id
     assert len(snapshots) == 1
     assert snapshots[0]["stars"] == 21
+
+
+def test_init_db_migrates_old_paper_tags_table() -> None:
+    conn = connect(":memory:")
+    conn.executescript(
+        """
+        CREATE TABLE papers (
+            id INTEGER PRIMARY KEY,
+            arxiv_id TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            abstract TEXT NOT NULL DEFAULT '',
+            url TEXT NOT NULL
+        );
+        CREATE TABLE paper_tags (
+            id INTEGER PRIMARY KEY,
+            paper_id INTEGER NOT NULL,
+            tag TEXT NOT NULL,
+            UNIQUE (paper_id, tag)
+        );
+        """
+    )
+
+    init_db(conn)
+    columns = get_table_columns(conn, "paper_tags")
+
+    assert "confidence" in columns
+    assert "source" in columns
+
+
+def test_tag_papers_cli_works_after_paper_tags_migration(tmp_path: Path) -> None:
+    db_path = tmp_path / "old.sqlite"
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+topics:
+  llm_inference:
+    weight: 1.0
+    keywords:
+      - speculative decoding
+""",
+        encoding="utf-8",
+    )
+    old_conn = sqlite3.connect(db_path)
+    old_conn.executescript(
+        """
+        CREATE TABLE papers (
+            id INTEGER PRIMARY KEY,
+            arxiv_id TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            abstract TEXT NOT NULL DEFAULT '',
+            url TEXT NOT NULL
+        );
+        CREATE TABLE paper_tags (
+            id INTEGER PRIMARY KEY,
+            paper_id INTEGER NOT NULL,
+            tag TEXT NOT NULL,
+            UNIQUE (paper_id, tag)
+        );
+        INSERT INTO papers (arxiv_id, title, abstract, url)
+        VALUES (
+            '2401.1',
+            'Speculative Decoding for Fast Inference',
+            'A systems paper.',
+            'https://arxiv.org/abs/2401.1'
+        );
+        """
+    )
+    old_conn.close()
+
+    result = runner.invoke(
+        app,
+        ["tag-papers", "--config", str(config_path), "--db", str(db_path)],
+    )
+
+    assert result.exit_code == 0
+
+    conn = connect(db_path)
+    columns = get_table_columns(conn, "paper_tags")
+    rows = fetch_all(conn, "SELECT tag, confidence, source FROM paper_tags")
+
+    assert "confidence" in columns
+    assert "source" in columns
+    assert rows[0]["tag"] == "llm_inference"
+    assert rows[0]["confidence"] == 0.95
+    assert rows[0]["source"] == "rules"

@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS daily_scores (
     paper_id INTEGER NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
     score REAL NOT NULL,
     components_json TEXT NOT NULL DEFAULT '{}',
+    scored_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (score_date, paper_id)
 );

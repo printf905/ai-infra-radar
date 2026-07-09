@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Annotated
 
@@ -20,6 +21,7 @@ from radar.tagging import tag_database
 app = typer.Typer(help="AI Infra Radar CLI")
 ConfigPath = Annotated[Path, typer.Option("--config", "-c")]
 DbPath = Annotated[Path | None, typer.Option("--db")]
+DigestDate = Annotated[str, typer.Option("--date")]
 
 
 def _load(config: Path, db: Path | None = None) -> tuple[AppConfig, sqlite3.Connection]:
@@ -94,9 +96,13 @@ def score(config: ConfigPath = Path("config.yaml"), db: DbPath = None) -> None:
 
 
 @app.command("digest")
-def digest(config: ConfigPath = Path("config.yaml")) -> None:
-    cfg, conn = _load(config)
-    path = write_digest(conn, cfg.reports_dir)
+def digest(
+    config: ConfigPath = Path("config.yaml"),
+    db: DbPath = None,
+    digest_date: DigestDate = "today",
+) -> None:
+    cfg, conn = _load(config, db)
+    path = write_digest(conn, cfg.reports_dir, _parse_digest_date(digest_date))
     conn.close()
     typer.echo(f"Wrote {path}")
 
@@ -118,6 +124,12 @@ def dashboard(config: ConfigPath = Path("config.yaml")) -> None:
 
 def main() -> None:
     app()
+
+
+def _parse_digest_date(value: str) -> date:
+    if value == "today":
+        return date.today()
+    return date.fromisoformat(value)
 
 
 if __name__ == "__main__":
