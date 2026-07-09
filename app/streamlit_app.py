@@ -45,13 +45,19 @@ def main() -> None:
         author = st.text_input("Author search")
         min_score = st.slider("Min score", 0.0, 1.0, 0.0, 0.01)
 
-    if not Path(db_path).exists():
+    db_file = Path(db_path)
+    if not db_file.is_file():
         _render_setup(db_path)
         return
 
-    conn = connect(db_path)
-    init_db(conn)
-    conn.close()
+    try:
+        conn = connect(db_path)
+        init_db(conn)
+        conn.close()
+    except sqlite3.Error as exc:
+        st.error(f"Could not open SQLite database: {exc}")
+        _render_setup(db_path)
+        return
 
     papers = _filter_papers(load_papers(db_path), topic_filter, keyword, author, min_score)
     repos = load_repositories(db_path)
@@ -90,7 +96,8 @@ def load_papers(db_path: str) -> pd.DataFrame:
                 p.published_at,
                 p.url,
                 COALESCE(tags.tags, '') AS tags,
-                COALESCE(scores.score, 0) AS score
+                COALESCE(scores.score, 0) AS score,
+                COALESCE(scores.components_json, '') AS components_json
             FROM papers p
             LEFT JOIN (
                 SELECT paper_id, GROUP_CONCAT(tag, ', ') AS tags
@@ -98,7 +105,7 @@ def load_papers(db_path: str) -> pd.DataFrame:
                 GROUP BY paper_id
             ) tags ON tags.paper_id = p.id
             LEFT JOIN (
-                SELECT ds.paper_id, ds.score
+                SELECT ds.paper_id, ds.score, ds.components_json
                 FROM daily_scores ds
                 JOIN (
                     SELECT paper_id, MAX(score_date) AS score_date
@@ -116,6 +123,7 @@ def load_papers(db_path: str) -> pd.DataFrame:
         return df
     df["authors"] = df["authors"].apply(_format_authors)
     df["score"] = df["score"].fillna(0.0).astype(float)
+    df["score_components"] = df["components_json"].apply(_format_components)
     return df
 
 
@@ -176,6 +184,11 @@ def _render_setup(db_path: str) -> None:
 
 
 def _render_overview(db_path: str, papers: pd.DataFrame, repos: pd.DataFrame) -> None:
+    st.info(
+        "v0.1 note: metadata comes from public APIs; topic tags and scores are "
+        "heuristic and rule-based. Scores are intended for exploration, not "
+        "definitive paper ranking."
+    )
     kpis = load_kpis(db_path)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Papers collected", kpis["papers"])
@@ -192,14 +205,15 @@ def _render_overview(db_path: str, papers: pd.DataFrame, repos: pd.DataFrame) ->
         else:
             st.bar_chart(topic_distribution.set_index("tag"))
     with right:
-        st.subheader("Papers by Date")
+        st.subheader("Collected Papers by Publication Date")
+        st.caption("Reflects publication dates of currently collected papers.")
         papers_by_date = load_papers_by_date(db_path)
         if papers_by_date.empty:
             st.caption("No dated papers yet.")
         else:
             st.line_chart(papers_by_date.set_index("published_date"))
 
-    st.subheader("Top Scored Papers")
+    st.subheader("Top Papers by Heuristic Score")
     _dataframe(
         papers[["title", "authors", "published_at", "tags", "score", "url"]].head(10),
         empty_message="No scored papers match the current filters.",
@@ -224,7 +238,15 @@ def _render_overview(db_path: str, papers: pd.DataFrame, repos: pd.DataFrame) ->
 
 def _render_papers(papers: pd.DataFrame) -> None:
     st.subheader("Papers")
-    columns = ["title", "authors", "published_at", "tags", "score", "url"]
+    columns = [
+        "title",
+        "authors",
+        "published_at",
+        "tags",
+        "score",
+        "score_components",
+        "url",
+    ]
     _dataframe(papers[columns], empty_message="No papers match the current filters.")
 
 
@@ -305,6 +327,18 @@ def _format_authors(raw_authors: Any) -> str:
     except json.JSONDecodeError:
         return raw_authors
     return ", ".join(str(author) for author in authors)
+
+
+def _format_components(raw_components: Any) -> str:
+    if not isinstance(raw_components, str) or not raw_components:
+        return ""
+    try:
+        components = json.loads(raw_components)
+    except json.JSONDecodeError:
+        return raw_components
+    if not isinstance(components, dict):
+        return ""
+    return ", ".join(f"{key}: {value}" for key, value in components.items())
 
 
 def _split_tags(value: str) -> list[str]:
