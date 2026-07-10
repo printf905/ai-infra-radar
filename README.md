@@ -65,14 +65,15 @@ Without a token, the GitHub Search API may return partial results due to rate li
 
 ## Deploy
 
-AI Infra Radar can run as a Streamlit Community Cloud demo with sample data.
+AI Infra Radar can run as a Streamlit Community Cloud demo with a committed public metadata snapshot.
 
 - Main file path: `app/streamlit_app.py`
 - Python version: 3.11+
 - Demo DB: `data/sample/sample.db`
-- Optional secret: `GITHUB_TOKEN` for live pipeline coverage, not needed for the demo
+- Optional secret: `GITHUB_TOKEN` for live pipeline coverage, not needed for local demo runs
 
 The app defaults to the sample DB on Streamlit Cloud when no live `data/radar.db` exists.
+The hosted demo database refreshes daily through GitHub Actions and is committed back to `data/sample/sample.db`.
 
 ## Full Commands
 

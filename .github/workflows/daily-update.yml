@@ -1,0 +1,51 @@
+name: Daily demo data update
+
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-demo-data:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run pipeline
+        run: |
+          python -m radar.cli ingest-arxiv --config config.example.yaml --db data/radar.db
+          python -m radar.cli ingest-github --config config.example.yaml --db data/radar.db
+          python -m radar.cli tag-papers --config config.example.yaml --db data/radar.db
+          python -m radar.cli match-repos --db data/radar.db
+          python -m radar.cli score --config config.example.yaml --db data/radar.db
+          python -m radar.cli digest --config config.example.yaml --db data/radar.db --date today
+
+      - name: Refresh hosted demo database
+        run: cp data/radar.db data/sample/sample.db
+
+      - name: Commit refreshed demo database
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/sample/sample.db
+          if git diff --cached --quiet; then
+            echo "No demo database changes to commit."
+          else
+            git commit -m "chore: refresh hosted demo data"
+            git push
+          fi
