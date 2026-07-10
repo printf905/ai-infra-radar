@@ -7,7 +7,11 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from radar.db import insert_digest
+from radar.matching import STRONG_MATCH_TYPES
 from radar.models import DigestRecord
+
+_STRONG_TYPES = tuple(sorted(STRONG_MATCH_TYPES))
+_STRONG_TYPE_PLACEHOLDERS = ",".join("?" for _ in _STRONG_TYPES)
 
 
 def write_digest(
@@ -142,18 +146,20 @@ def _paper_tags(conn: sqlite3.Connection, paper_id: int) -> list[str]:
 
 def _matched_repo(conn: sqlite3.Connection, paper_id: int) -> str:
     row = conn.execute(
-        """
-        SELECT r.full_name, r.url
+        f"""
+        SELECT r.full_name, r.url, m.match_type, m.confidence
         FROM paper_repo_matches m
         JOIN repos r ON r.id = m.repo_id
         WHERE m.paper_id = ?
-        ORDER BY m.score DESC
+          AND m.match_type IN ({_STRONG_TYPE_PLACEHOLDERS})
+          AND (CASE WHEN m.confidence > 0 THEN m.confidence ELSE m.score END) >= 0.70
+        ORDER BY m.confidence DESC
         LIMIT 1
         """,
-        (paper_id,),
+        (paper_id, *_STRONG_TYPES),
     ).fetchone()
     if row is None:
-        return "No matched repo yet"
+        return "No strong matched repo yet"
     return f"{row['full_name']} ({row['url']})"
 
 

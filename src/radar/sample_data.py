@@ -266,18 +266,24 @@ def _load_matches(
             repo_id=repo_ids["sample/vllm-serving-lab"],
             score=0.82,
             reason="sample match: serving and speculative decoding",
+            match_type="title_similarity",
+            confidence=0.82,
         ),
         Match(
             paper_id=paper_ids["2607.00002"],
             repo_id=repo_ids["sample/rag-cache-kit"],
             score=0.76,
             reason="sample match: retrieval cache and long context",
+            match_type="title_similarity",
+            confidence=0.76,
         ),
         Match(
             paper_id=paper_ids["2607.00003"],
             repo_id=repo_ids["sample/agent-browser-runtime"],
             score=0.72,
             reason="sample match: browser agent workflow",
+            match_type="title_similarity",
+            confidence=0.72,
         ),
     ]
     return upsert_matches(conn, matches)

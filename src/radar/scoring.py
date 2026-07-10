@@ -6,7 +6,11 @@ from datetime import UTC, date, datetime
 
 from radar.config import AppConfig
 from radar.db import insert_daily_score
+from radar.matching import STRONG_MATCH_TYPES
 from radar.models import DailyScore
+
+_STRONG_TYPES = tuple(sorted(STRONG_MATCH_TYPES))
+_STRONG_TYPE_PLACEHOLDERS = ",".join("?" for _ in _STRONG_TYPES)
 
 
 def score_papers(
@@ -99,26 +103,30 @@ def _paper_tag_confidences(conn: sqlite3.Connection, paper_id: int) -> dict[str,
 
 def _repo_match_confidence(conn: sqlite3.Connection, paper_id: int) -> float:
     row = conn.execute(
-        """
+        f"""
         SELECT MAX(CASE WHEN confidence > 0 THEN confidence ELSE score END) AS value
         FROM paper_repo_matches
         WHERE paper_id = ?
+          AND match_type IN ({_STRONG_TYPE_PLACEHOLDERS})
+          AND (CASE WHEN confidence > 0 THEN confidence ELSE score END) >= 0.70
         """,
-        (paper_id,),
+        (paper_id, *_STRONG_TYPES),
     ).fetchone()
     return _clip(float(row["value"] or 0.0)) if row else 0.0
 
 
 def _repo_momentum(conn: sqlite3.Connection, paper_id: int) -> float:
     rows = conn.execute(
-        """
+        f"""
         SELECT rs.repo_id, rs.captured_at, rs.stars
         FROM paper_repo_matches m
         JOIN repo_snapshots rs ON rs.repo_id = m.repo_id
         WHERE m.paper_id = ?
+          AND m.match_type IN ({_STRONG_TYPE_PLACEHOLDERS})
+          AND (CASE WHEN m.confidence > 0 THEN m.confidence ELSE m.score END) >= 0.70
         ORDER BY rs.repo_id, rs.captured_at
         """,
-        (paper_id,),
+        (paper_id, *_STRONG_TYPES),
     ).fetchall()
     snapshots: dict[int, list[sqlite3.Row]] = {}
     for row in rows:

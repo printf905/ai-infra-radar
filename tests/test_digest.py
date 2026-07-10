@@ -94,7 +94,19 @@ def test_digest_includes_matched_repo_and_topic_trends(tmp_path) -> None:
             pushed_at=datetime(2026, 7, 8, tzinfo=UTC),
         ),
     )
-    upsert_matches(conn, [Match(paper_id=paper_id, repo_id=repo_id, score=0.8, reason="test")])
+    upsert_matches(
+        conn,
+        [
+            Match(
+                paper_id=paper_id,
+                repo_id=repo_id,
+                score=0.8,
+                reason="test",
+                match_type="title_similarity",
+                confidence=0.8,
+            )
+        ],
+    )
 
     path = write_digest(conn, tmp_path, date(2026, 7, 9))
     content = path.read_text(encoding="utf-8")

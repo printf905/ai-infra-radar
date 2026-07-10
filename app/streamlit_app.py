@@ -11,9 +11,11 @@ import pandas as pd
 import streamlit as st
 
 from radar.db import connect, init_db
+from radar.matching import STRONG_MATCH_TYPES
 
 DEFAULT_DB_PATH = "data/radar.db"
 REPORTS_DIR = Path("reports")
+STRONG_MATCH_TYPES_SQL = ",".join(f"'{match_type}'" for match_type in sorted(STRONG_MATCH_TYPES))
 SETUP_COMMANDS = [
     "python -m radar.cli ingest-arxiv --config config.example.yaml --db data/radar.db",
     "python -m radar.cli ingest-github --config config.example.yaml --db data/radar.db",
@@ -155,7 +157,7 @@ def load_repositories(db_path: str) -> pd.DataFrame:
 def load_matches(db_path: str) -> pd.DataFrame:
     with sqlite3.connect(db_path) as conn:
         return pd.read_sql_query(
-            """
+            f"""
             SELECT
                 p.title AS paper_title,
                 r.full_name AS repo,
@@ -167,6 +169,8 @@ def load_matches(db_path: str) -> pd.DataFrame:
             FROM paper_repo_matches m
             JOIN papers p ON p.id = m.paper_id
             JOIN repos r ON r.id = m.repo_id
+            WHERE m.confidence >= 0.70
+              AND m.match_type IN ({STRONG_MATCH_TYPES_SQL})
             ORDER BY m.confidence DESC, m.updated_at DESC
             """,
             conn,
@@ -280,6 +284,7 @@ def _render_repositories(repos: pd.DataFrame) -> None:
 
 def _render_matches(matches: pd.DataFrame) -> None:
     st.subheader("Paper ↔ Repo Matches")
+    st.info("Matches are heuristic and conservative in v0.2.")
     _dataframe(matches, empty_message="No paper/repo matches yet.")
 
 

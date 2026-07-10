@@ -155,8 +155,22 @@ def test_high_repo_momentum_increases_score() -> None:
     upsert_matches(
         conn,
         [
-            Match(paper_id=low_id, repo_id=low_repo_id, score=0.5, reason="test", confidence=0.5),
-            Match(paper_id=high_id, repo_id=high_repo_id, score=0.5, reason="test", confidence=0.5),
+            Match(
+                paper_id=low_id,
+                repo_id=low_repo_id,
+                score=0.8,
+                reason="test",
+                match_type="title_similarity",
+                confidence=0.8,
+            ),
+            Match(
+                paper_id=high_id,
+                repo_id=high_repo_id,
+                score=0.8,
+                reason="test",
+                match_type="title_similarity",
+                confidence=0.8,
+            ),
         ],
     )
     insert_repo_snapshot(
@@ -194,7 +208,16 @@ def test_score_with_match_and_momentum_stays_between_zero_and_one() -> None:
     replace_paper_tags(conn, paper_id, {"inference_optimization": 0.95})
     upsert_matches(
         conn,
-        [Match(paper_id=paper_id, repo_id=repo_id, score=0.99, reason="test", confidence=0.99)],
+        [
+            Match(
+                paper_id=paper_id,
+                repo_id=repo_id,
+                score=0.99,
+                reason="test",
+                match_type="arxiv_id",
+                confidence=0.99,
+            )
+        ],
     )
     insert_repo_snapshot(
         conn,
@@ -208,6 +231,42 @@ def test_score_with_match_and_momentum_stays_between_zero_and_one() -> None:
     score = score_papers(conn, config, today=date(2026, 7, 9))[0].score
 
     assert 0.0 <= score <= 1.0
+
+
+def test_scoring_ignores_weak_topic_overlap() -> None:
+    conn = connect(":memory:")
+    init_db(conn)
+    config = AppConfig(topics={"rag": TopicConfig(weight=1.0)})
+    paper_id = _paper(conn, "2401.10", "RAG Runtime", datetime(2026, 7, 9, tzinfo=UTC))
+    repo_id = upsert_repo(
+        conn,
+        Repo(github_id=204, full_name="example/rag", url="https://github.com/example/rag"),
+    )
+    replace_paper_tags(conn, paper_id, {"rag": 0.75})
+    upsert_matches(
+        conn,
+        [
+            Match(
+                paper_id=paper_id,
+                repo_id=repo_id,
+                score=0.25,
+                reason="weak topic overlap",
+                match_type="topic_overlap",
+                confidence=0.25,
+            )
+        ],
+    )
+
+    score_papers(conn, config, today=date(2026, 7, 9))
+    row = fetch_all(
+        conn,
+        "SELECT components_json FROM daily_scores WHERE paper_id = ?",
+        (paper_id,),
+    )[0]
+    components = json.loads(row["components_json"])
+
+    assert components["repo_match_confidence"] == 0.0
+    assert components["repo_momentum"] == 0.0
 
 
 def _paper(conn, arxiv_id: str, title: str, published_at: datetime) -> int:

@@ -88,7 +88,7 @@ make lint
 
 ## Reliability Note
 
-arXiv and GitHub metadata comes from public APIs. Topic tags and scores are rule-based heuristics in v0.1. Ranking is for exploration, not definitive research evaluation. GitHub results may be partial if rate limited.
+arXiv and GitHub metadata comes from public APIs. Topic tags, paper-to-repo matching, and scores are heuristic in v0.1/v0.2; matching is intentionally conservative. Ranking is for exploration, not definitive research evaluation. GitHub results may be partial if rate limited. No paid LLM API is used.
 
 ## Roadmap
 
