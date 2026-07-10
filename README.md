@@ -4,6 +4,18 @@ Track which AI research ideas are turning into real code.
 
 AI Infra Radar is a local-first dashboard for AI infrastructure trends across arXiv and GitHub. It collects public metadata, stores it in SQLite, applies rule-based topic tags, computes exploratory scores, generates Markdown digests, and renders a Streamlit dashboard.
 
+## Live Demo
+
+https://ai-infra-radar.streamlit.app
+
+The hosted Streamlit demo reads from `data/sample/sample.db`. GitHub Actions refreshes that public metadata snapshot daily by running:
+
+```text
+ingest-arxiv -> ingest-github -> tag-papers -> match-repos -> score -> digest
+```
+
+The refreshed snapshot is committed back to the repository.
+
 ## What It Does
 
 - Collects AI infrastructure papers from arXiv.
