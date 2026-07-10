@@ -1,5 +1,0 @@
-# Placeholder for scheduled ingestion workflow.
-#
-# v0.1 is local-first, so this workflow intentionally does not run yet.
-# Future versions can add a scheduled job that installs dependencies,
-# runs ingestion, and publishes generated reports as artifacts.
