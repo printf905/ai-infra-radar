@@ -10,18 +10,9 @@ __pycache__/
 data/*.db
 data/*.sqlite
 !data/sample/
-!data/sample/*.db
 !data/sample/sample.db
 
 .DS_Store
 reports/*.md
 !reports/examples/
 !reports/examples/*.md
-
-__pycache__/
-*.pyc
-.pytest_cache/
-.ruff_cache/
-.venv/
-.env
-.DS_Store

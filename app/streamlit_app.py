@@ -4,16 +4,23 @@ import argparse
 import json
 import os
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import streamlit as st
 
-from radar.db import connect, init_db
-from radar.matching import STRONG_MATCH_TYPES
+ROOT_DIR = Path(__file__).resolve().parents[1]
+SRC_DIR = ROOT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from radar.db import connect, init_db  # noqa: E402
+from radar.matching import STRONG_MATCH_TYPES  # noqa: E402
 
 DEFAULT_DB_PATH = "data/radar.db"
+SAMPLE_DB_PATH = "data/sample/sample.db"
 REPORTS_DIR = Path("reports")
 STRONG_MATCH_TYPES_SQL = ",".join(f"'{match_type}'" for match_type in sorted(STRONG_MATCH_TYPES))
 SETUP_COMMANDS = [
@@ -27,9 +34,20 @@ SETUP_COMMANDS = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default=os.getenv("RADAR_DB_PATH", DEFAULT_DB_PATH))
+    parser.add_argument("--db", default=resolve_default_db_path())
     args, _ = parser.parse_known_args()
     return args
+
+
+def resolve_default_db_path() -> str:
+    env_path = os.getenv("RADAR_DB_PATH")
+    if env_path:
+        return env_path
+    if Path(DEFAULT_DB_PATH).is_file():
+        return DEFAULT_DB_PATH
+    if Path(SAMPLE_DB_PATH).is_file():
+        return SAMPLE_DB_PATH
+    return DEFAULT_DB_PATH
 
 
 def main() -> None:
@@ -52,6 +70,8 @@ def main() -> None:
     if not db_file.is_file():
         _render_setup(db_path)
         return
+    if _is_sample_db(db_file):
+        st.info("Demo mode: using sample data from data/sample/sample.db.")
 
     try:
         conn = connect(db_path)
@@ -210,6 +230,10 @@ def _render_setup(db_path: str) -> None:
     st.info(f"Database not found: `{db_path}`")
     st.write("Run these commands to create and populate a local database:")
     st.code("\n".join(SETUP_COMMANDS), language="bash")
+
+
+def _is_sample_db(db_path: Path) -> bool:
+    return db_path.resolve() == Path(SAMPLE_DB_PATH).resolve()
 
 
 def _render_overview(db_path: str, papers: pd.DataFrame, repos: pd.DataFrame) -> None:

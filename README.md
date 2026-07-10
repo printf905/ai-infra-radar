@@ -42,7 +42,7 @@ make pipeline
 make dashboard
 ```
 
-The dashboard defaults to `data/radar.db`. If the database is missing, it shows setup commands in the app.
+The dashboard uses `RADAR_DB_PATH` when set, otherwise `data/radar.db` when present, and falls back to the committed sample database at `data/sample/sample.db`.
 
 ## What the Dashboard Shows
 
@@ -62,6 +62,17 @@ export GITHUB_TOKEN="..."
 ```
 
 Without a token, the GitHub Search API may return partial results due to rate limits.
+
+## Deploy
+
+AI Infra Radar can run as a Streamlit Community Cloud demo with sample data.
+
+- Main file path: `app/streamlit_app.py`
+- Python version: 3.11+
+- Demo DB: `data/sample/sample.db`
+- Optional secret: `GITHUB_TOKEN` for live pipeline coverage, not needed for the demo
+
+The app defaults to the sample DB on Streamlit Cloud when no live `data/radar.db` exists.
 
 ## Full Commands
 
